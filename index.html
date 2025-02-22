@@ -1,252 +1,621 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Canvas Block Game</title>
+  <meta charset="UTF-8">
+  <title>All 3 Block Games in One Page</title>
   <style>
+    /* ---------------------------
+       Global or Shared Styling
+       --------------------------- */
     body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: #f0f4f8;
       margin: 0;
       padding: 0;
       font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    #gameContainer {
+
+    h1 {
+      margin: 20px 0;
+    }
+
+    section {
+      width: 90%;
+      max-width: 800px;
+      background: #fff;
+      margin: 20px;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    hr {
+      width: 100%;
+      max-width: 800px;
+      border: none;
+      border-top: 2px solid #ccc;
+      margin: 30px 0;
+    }
+
+    /* ---------------------------
+       Game 1 (Canvas Block Game)
+       --------------------------- */
+    #game1Container {
       margin-top: 20px;
       position: relative;
+      text-align: center;
     }
-    #scoreDisplay {
+    #scoreDisplay1 {
       margin-top: 20px;
       font-size: 24px;
       font-weight: bold;
     }
-    #gameMessage {
+    #gameMessage1 {
       margin-top: 10px;
       font-size: 20px;
+      color: red;
+    }
+    /* Canvas dimension set inline in code. */
+
+    /* ---------------------------------------------
+       Game 2 (Grid-based Block Game with Potential)
+       --------------------------------------------- */
+    #game-container2 {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #score-display2,
+    #potential-display2,
+    #message-display2 {
+      margin-bottom: 10px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    #game-grid2 {
+      display: grid;
+      grid-template-columns: repeat(10, 50px);
+      grid-template-rows: repeat(10, 50px);
+      border: 2px solid black;
+    }
+    .block2 {
+      width: 50px;
+      height: 50px;
+      border: 1px solid lightgray;
+      box-sizing: border-box;
+      text-align: center;
+      line-height: 50px;
+      cursor: pointer;
+      font-size: 20px;
+      user-select: none; /* Prevent text selection on blocks */
+    }
+    .block2:hover {
+      background-color: #eee;
+    }
+    .outcome-multiplier2 {
+      background-color: lightgreen;
+    }
+    .outcome-score2 {
+      background-color: lightblue;
+    }
+    .outcome-failure2 {
+      background-color: lightcoral;
+      color: white;
+      font-weight: bold;
+    }
+    .outcome-potential2 {
+      background-color: gold;
+    }
+    .game-over2 {
+      opacity: 0.7;
+      pointer-events: none; /* Disable clicks when game is over */
+    }
+
+    /* ---------------------------------------
+       Game 3 (Block Selection, Shield Mechanic)
+       --------------------------------------- */
+    #game-board3 {
+      display: grid;
+      grid-template-columns: repeat(5, 50px);
+      gap: 10px;
+      margin: 20px;
+    }
+    .block3 {
+      width: 50px;
+      height: 50px;
+      background-color: gray;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    .block3.revealed {
+      cursor: default;
+      background-color: lightgray;
+      color: black;
+    }
+    #score3, #shield3 {
+      margin: 10px 20px;
+    }
+    #game-over3 {
+      margin: 10px 20px;
+      font-size: 24px;
       color: red;
     }
   </style>
 </head>
 <body>
-  <h1>Canvas Block Game</h1>
+  <h1>All 3 Games in One Page</h1>
 
-  <div id="gameContainer">
-    <canvas id="gameCanvas" width="600" height="100"></canvas>
-  </div>
+  <!-- ========================== Game 1 ========================== -->
+  <section>
+    <h2>Game 1: ChatGPT o1</h2>
+    <div id="game1Container">
+      <canvas id="gameCanvas1" width="600" height="100"></canvas>
+    </div>
+    <div id="scoreDisplay1">Score: 0</div>
+    <div id="gameMessage1"></div>
 
-  <div id="scoreDisplay">Score: 0</div>
-  <div id="gameMessage"></div>
+    <script>
+      // --------------------
+      // Game 1 JavaScript
+      // --------------------
+      const canvas1 = document.getElementById('gameCanvas1');
+      const ctx1 = canvas1.getContext('2d');
 
-  <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+      const scoreDisplay1 = document.getElementById('scoreDisplay1');
+      const gameMessage1 = document.getElementById('gameMessage1');
 
-    const scoreDisplay = document.getElementById('scoreDisplay');
-    const gameMessage = document.getElementById('gameMessage');
+      // Game 1 constants
+      const BLOCK_COUNT_1 = 10; // Number of blocks
+      const BLOCK_WIDTH_1 = 50;
+      const BLOCK_HEIGHT_1 = 50;
+      const BLOCK_SPACING_1 = 10; // Spacing between blocks
 
-    // Game constants
-    const BLOCK_COUNT = 10; // Number of blocks
-    const BLOCK_WIDTH = 50;
-    const BLOCK_HEIGHT = 50;
-    const BLOCK_SPACING = 10; // Spacing between blocks
+      // Store each block's info for Game 1
+      let blocks1 = [];
 
-    // Store each block's info
-    let blocks = [];
+      // Player stats
+      let score1 = 0;
+      let hasShield1 = false; // If the user can avoid one skull
+      let gameOver1 = false;
 
-    // Player stats
-    let score = 0;
-    let hasShield = false; // If the user can avoid one skull
-    let gameOver = false;
+      // Generate random blocks (Game 1)
+      function generateBlocks1() {
+        let potentialTypes1 = [];
 
-    // Generate random blocks
-    // Each block can be:
-    // - 'score' (value up to 100)
-    // - 'multiplier' (value up to 10)
-    // - 'skull' (failure event)
-    // - 'shield' (grants one-time avoidance)
+        // We'll decide how many skulls: random between 1 and 3
+        let skullCount1 = Math.floor(Math.random() * 3) + 1;
 
-    // We'll ensure there's exactly 1 shield, up to 2 or 3 skulls, some multipliers, rest scores.
+        // We'll decide how many multipliers: random between 2 and 4
+        let multiplierCount1 = Math.floor(Math.random() * 3) + 2;
 
-    function generateBlocks() {
-      // We can distribute these in a random manner
-      let potentialTypes = [];
+        // We have exactly 1 shield
+        let shieldCount1 = 1;
 
-      // We'll decide how many skulls: random between 1 and 3
-      let skullCount = Math.floor(Math.random() * 3) + 1;
-
-      // We'll decide how many multipliers: random between 2 and 4
-      let multiplierCount = Math.floor(Math.random() * 3) + 2;
-
-      // We have exactly 1 shield
-      let shieldCount = 1;
-
-      // The rest are scores
-      let scoreCount = BLOCK_COUNT - (skullCount + multiplierCount + shieldCount);
-      if (scoreCount < 0) {
-        // fallback if random picks exceed the block count
-        skullCount = 2;
-        multiplierCount = 3;
-        shieldCount = 1;
-        scoreCount = BLOCK_COUNT - (skullCount + multiplierCount + shieldCount);
-      }
-
-      // Fill arrays with types
-      for (let i = 0; i < skullCount; i++) {
-        potentialTypes.push('skull');
-      }
-      for (let i = 0; i < multiplierCount; i++) {
-        potentialTypes.push('multiplier');
-      }
-      for (let i = 0; i < shieldCount; i++) {
-        potentialTypes.push('shield');
-      }
-      for (let i = 0; i < scoreCount; i++) {
-        potentialTypes.push('score');
-      }
-
-      // Shuffle the array
-      for (let i = potentialTypes.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [potentialTypes[i], potentialTypes[j]] = [potentialTypes[j], potentialTypes[i]];
-      }
-
-      // Now create block objects from these types
-      blocks = potentialTypes.map((type, index) => {
-        let value;
-        if (type === 'score') {
-          value = Math.floor(Math.random() * 100) + 1; // up to 100
-        } else if (type === 'multiplier') {
-          value = Math.floor(Math.random() * 10) + 1; // up to 10
-        } else {
-          value = 0; // skull or shield doesn't need a numeric value
+        // The rest are scores
+        let scoreCount1 = BLOCK_COUNT_1 - (skullCount1 + multiplierCount1 + shieldCount1);
+        if (scoreCount1 < 0) {
+          // fallback if random picks exceed the block count
+          skullCount1 = 2;
+          multiplierCount1 = 3;
+          shieldCount1 = 1;
+          scoreCount1 = BLOCK_COUNT_1 - (skullCount1 + multiplierCount1 + shieldCount1);
         }
 
-        // Calculate position
-        const x = index * (BLOCK_WIDTH + BLOCK_SPACING) + BLOCK_SPACING;
-        const y = (canvas.height - BLOCK_HEIGHT) / 2; // center vertically
-
-        return {
-          x,
-          y,
-          width: BLOCK_WIDTH,
-          height: BLOCK_HEIGHT,
-          revealed: false,
-          type,
-          value
-        };
-      });
-    }
-
-    function drawBlocks() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      blocks.forEach((block) => {
-        // Draw block background
-        if (!block.revealed) {
-          ctx.fillStyle = '#7ea9e1'; // hidden color
-        } else {
-          // Reveal color based on type
-          if (block.type === 'score') {
-            ctx.fillStyle = '#79cc90';
-          } else if (block.type === 'multiplier') {
-            ctx.fillStyle = '#f4cf79';
-          } else if (block.type === 'skull') {
-            ctx.fillStyle = '#e17878';
-          } else if (block.type === 'shield') {
-            ctx.fillStyle = '#9d79f4';
-          }
+        // Fill arrays with types
+        for (let i = 0; i < skullCount1; i++) {
+          potentialTypes1.push('skull');
         }
-        ctx.fillRect(block.x, block.y, block.width, block.height);
+        for (let i = 0; i < multiplierCount1; i++) {
+          potentialTypes1.push('multiplier');
+        }
+        for (let i = 0; i < shieldCount1; i++) {
+          potentialTypes1.push('shield');
+        }
+        for (let i = 0; i < scoreCount1; i++) {
+          potentialTypes1.push('score');
+        }
 
-        // Outline
-        ctx.strokeStyle = '#333';
-        ctx.strokeRect(block.x, block.y, block.width, block.height);
+        // Shuffle the array
+        for (let i = potentialTypes1.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [potentialTypes1[i], potentialTypes1[j]] = [potentialTypes1[j], potentialTypes1[i]];
+        }
 
-        // If revealed, draw text
-        if (block.revealed) {
-          ctx.fillStyle = '#000';
-          ctx.font = '16px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-
-          let text;
-          if (block.type === 'score') {
-            text = `+${block.value}`;
-          } else if (block.type === 'multiplier') {
-            text = `${block.value}x`;
-          } else if (block.type === 'skull') {
-            text = 'Skull';
+        // Now create block objects from these types
+        blocks1 = potentialTypes1.map((type, index) => {
+          let value;
+          if (type === 'score') {
+            value = Math.floor(Math.random() * 100) + 1; // up to 100
+          } else if (type === 'multiplier') {
+            value = Math.floor(Math.random() * 10) + 1; // up to 10
           } else {
-            text = 'Shield';
+            value = 0; // skull or shield doesn't need a numeric value
           }
 
-          ctx.fillText(text, block.x + block.width / 2, block.y + block.height / 2);
+          // Calculate position
+          const x = index * (BLOCK_WIDTH_1 + BLOCK_SPACING_1) + BLOCK_SPACING_1;
+          const y = (canvas1.height - BLOCK_HEIGHT_1) / 2; // center vertically
+
+          return {
+            x,
+            y,
+            width: BLOCK_WIDTH_1,
+            height: BLOCK_HEIGHT_1,
+            revealed: false,
+            type,
+            value
+          };
+        });
+      }
+
+      function drawBlocks1() {
+        ctx1.clearRect(0, 0, canvas1.width, canvas1.height);
+
+        blocks1.forEach((block) => {
+          // Draw block background
+          if (!block.revealed) {
+            ctx1.fillStyle = '#7ea9e1'; // hidden color
+          } else {
+            // Reveal color based on type
+            if (block.type === 'score') {
+              ctx1.fillStyle = '#79cc90';
+            } else if (block.type === 'multiplier') {
+              ctx1.fillStyle = '#f4cf79';
+            } else if (block.type === 'skull') {
+              ctx1.fillStyle = '#e17878';
+            } else if (block.type === 'shield') {
+              ctx1.fillStyle = '#9d79f4';
+            }
+          }
+          ctx1.fillRect(block.x, block.y, block.width, block.height);
+
+          // Outline
+          ctx1.strokeStyle = '#333';
+          ctx1.strokeRect(block.x, block.y, block.width, block.height);
+
+          // If revealed, draw text
+          if (block.revealed) {
+            ctx1.fillStyle = '#000';
+            ctx1.font = '16px Arial';
+            ctx1.textAlign = 'center';
+            ctx1.textBaseline = 'middle';
+
+            let text;
+            if (block.type === 'score') {
+              text = `+${block.value}`;
+            } else if (block.type === 'multiplier') {
+              text = `${block.value}x`;
+            } else if (block.type === 'skull') {
+              text = 'Skull';
+            } else {
+              text = 'Shield';
+            }
+
+            ctx1.fillText(text, block.x + block.width / 2, block.y + block.height / 2);
+          }
+        });
+      }
+
+      // Handle click (Game 1)
+      canvas1.addEventListener('click', (e) => {
+        if (gameOver1) return;
+
+        const rect = canvas1.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        // Check which block is clicked
+        for (let block of blocks1) {
+          if (
+            clickX >= block.x &&
+            clickX <= block.x + block.width &&
+            clickY >= block.y &&
+            clickY <= block.y + block.height &&
+            !block.revealed
+          ) {
+            revealBlock1(block);
+            break;
+          }
         }
       });
-    }
 
-    // Handle click
-    canvas.addEventListener('click', (e) => {
-      if (gameOver) return;
+      function revealBlock1(block) {
+        block.revealed = true;
 
-      const rect = canvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
+        if (block.type === 'score') {
+          score1 += block.value;
+        } else if (block.type === 'multiplier') {
+          score1 *= block.value;
+        } else if (block.type === 'shield') {
+          hasShield1 = true;
+        } else if (block.type === 'skull') {
+          if (hasShield1) {
+            // Use up shield
+            hasShield1 = false;
+          } else {
+            // Game over
+            gameOver1 = true;
+            gameMessage1.textContent = 'Game Over! You found a skull!';
+          }
+        }
 
-      // Check which block is clicked
-      for (let block of blocks) {
-        if (
-          clickX >= block.x &&
-          clickX <= block.x + block.width &&
-          clickY >= block.y &&
-          clickY <= block.y + block.height &&
-          !block.revealed
-        ) {
-          revealBlock(block);
-          break;
+        scoreDisplay1.textContent = `Score: ${score1}`;
+        drawBlocks1();
+      }
+
+      function initGame1() {
+        gameOver1 = false;
+        score1 = 0;
+        hasShield1 = false;
+        gameMessage1.textContent = '';
+
+        generateBlocks1();
+        drawBlocks1();
+        scoreDisplay1.textContent = 'Score: 0';
+      }
+
+      // Start Game 1
+      initGame1();
+    </script>
+  </section>
+
+  <hr />
+
+  <!-- ========================== Game 2 ========================== -->
+  <section>
+    <h2>Game 2: Gemini 2.0 Thinking</h2>
+    <div id="game-container2">
+      <div id="score-display2">Score: 0</div>
+      <div id="potential-display2">Potential: Inactive</div>
+      <div id="message-display2"></div>
+      <div id="game-grid2"></div>
+    </div>
+
+    <script>
+      // --------------------
+      // Game 2 JavaScript
+      // --------------------
+      const gameGrid2 = document.getElementById('game-grid2');
+      const scoreDisplay2 = document.getElementById('score-display2');
+      const potentialDisplay2 = document.getElementById('potential-display2');
+      const messageDisplay2 = document.getElementById('message-display2');
+
+      let score2 = 0;
+      let potentialActive2 = false;
+      let gameOver2 = false;
+      const numRows2 = 10;
+      const numCols2 = 10;
+      let blocks2 = []; // To easily manage blocks if needed
+
+      function initGame2() {
+        score2 = 0;
+        potentialActive2 = false;
+        gameOver2 = false;
+        scoreDisplay2.textContent = 'Score: 0';
+        potentialDisplay2.textContent = 'Potential: Inactive';
+        messageDisplay2.textContent = '';
+        gameGrid2.classList.remove('game-over2');
+        gameGrid2.innerHTML = '';
+        blocks2 = [];
+
+        for (let i = 0; i < numRows2; i++) {
+          for (let j = 0; j < numCols2; j++) {
+            const block = document.createElement('div');
+            block.classList.add('block2');
+            block.dataset.row = i;
+            block.dataset.col = j;
+            block.addEventListener('click', handleBlockClick2);
+            gameGrid2.appendChild(block);
+            blocks2.push(block);
+          }
         }
       }
-    });
 
-    function revealBlock(block) {
-      block.revealed = true;
-
-      if (block.type === 'score') {
-        score += block.value;
-      } else if (block.type === 'multiplier') {
-        score *= block.value;
-      } else if (block.type === 'shield') {
-        hasShield = true;
-      } else if (block.type === 'skull') {
-        if (hasShield) {
-          // Use up shield
-          hasShield = false;
+      function generateOutcome2() {
+        const outcomeRoll = Math.random();
+        if (outcomeRoll < 0.4) {
+          // 40% chance of multiplier
+          const multiplier = Math.ceil(Math.random() * 10); // 1x to 10x
+          const scoreValue = Math.ceil(Math.random() * 100); // 1 to 100 score to multiply
+          return { type: 'multiplier', value: multiplier, scoreValue: scoreValue };
+        } else if (outcomeRoll < 0.8) {
+          // 40% chance of score
+          const scoreAmount = Math.ceil(Math.random() * 100);
+          return { type: 'score', value: scoreAmount };
+        } else if (outcomeRoll < 0.95) {
+          // 15% chance of failure
+          return { type: 'failure' };
         } else {
-          // Game over
-          gameOver = true;
-          gameMessage.textContent = 'Game Over! You found a skull!';
+          // 5% chance of potential
+          return { type: 'potential' };
         }
       }
 
-      scoreDisplay.textContent = `Score: ${score}`;
-      drawBlocks();
-    }
+      function handleBlockClick2(event) {
+        if (gameOver2) return;
 
-    function initGame() {
-      gameOver = false;
-      score = 0;
-      hasShield = false;
-      gameMessage.textContent = '';
+        const block = event.target;
+        const outcome = generateOutcome2();
 
-      generateBlocks();
-      drawBlocks();
-      scoreDisplay.textContent = 'Score: 0';
-    }
+        switch (outcome.type) {
+          case 'multiplier': {
+            const scoreIncrease = outcome.value * outcome.scoreValue;
+            score2 += scoreIncrease;
+            block.classList.add('outcome-multiplier2');
+            block.textContent = `x${outcome.value}`;
+            updateScoreDisplay2();
+            break;
+          }
+          case 'score': {
+            score2 += outcome.value;
+            block.classList.add('outcome-score2');
+            block.textContent = `+${outcome.value}`;
+            updateScoreDisplay2();
+            break;
+          }
+          case 'failure': {
+            if (potentialActive2) {
+              potentialActive2 = false;
+              potentialDisplay2.textContent = 'Potential: Inactive';
+              messageDisplay2.textContent = 'Potential used! Failure avoided.';
+              block.textContent = 'Saved!';
+              block.classList.add('outcome-potential2');
+            } else {
+              gameOver2 = true;
+              messageDisplay2.textContent = 'Game Over! Skull found. Final Score: ' + score2;
+              block.textContent = '💀';
+              block.classList.add('outcome-failure2');
+              gameGrid2.classList.add('game-over2');
+            }
+            break;
+          }
+          case 'potential': {
+            potentialActive2 = true;
+            potentialDisplay2.textContent = 'Potential: Active';
+            messageDisplay2.textContent = 'Potential activated! Next failure avoided.';
+            block.textContent = 'P';
+            block.classList.add('outcome-potential2');
+            break;
+          }
+        }
 
-    initGame();
+        // Disable further clicks on this block
+        block.removeEventListener('click', handleBlockClick2);
+        block.classList.add('clicked2');
+      }
 
-  </script>
+      function updateScoreDisplay2() {
+        scoreDisplay2.textContent = 'Score: ' + score2;
+      }
+
+      // Initialize Game 2 immediately
+      initGame2();
+    </script>
+  </section>
+
+  <hr />
+
+  <!-- ========================== Game 3 ========================== -->
+  <section>
+    <h2>Game 3: Grok 3 Thinking</h2>
+    <div id="game-board3"></div>
+    <div id="score3">Score: 0</div>
+    <div id="shield3">Shield: <span id="shield-status3"></span></div>
+    <div id="game-over3" style="display: none;">Game Over</div>
+
+    <script>
+      // --------------------
+      // Game 3 JavaScript
+      // --------------------
+      const ROWS_3 = 10;
+      const COLS_3 = 5;
+      const TOTAL_BLOCKS_3 = ROWS_3 * COLS_3;
+
+      let score3Val = 0;
+      let hasShield3 = Math.random() < 0.5; // 50% chance of shield
+      const blocks3 = [];
+
+      const gameBoard3 = document.getElementById('game-board3');
+      const scoreLabel3 = document.getElementById('score3');
+      const shieldLabel3 = document.getElementById('shield3');
+      const shieldStatus3 = document.getElementById('shield-status3');
+      const gameOverLabel3 = document.getElementById('game-over3');
+
+      // Assign random type to each block
+      function getRandomType3() {
+        const rand = Math.random();
+        if (rand < 0.4) return 'multiplier'; // 40% chance
+        if (rand < 0.6) return 'skull';     // 20% chance
+        return 'score';                     // 40% chance
+      }
+
+      function initGame3() {
+        score3Val = 0;
+        hasShield3 = Math.random() < 0.5;
+        blocks3.length = 0;
+        gameBoard3.innerHTML = '';
+        gameOverLabel3.style.display = 'none';
+        scoreLabel3.textContent = 'Score: 0';
+        shieldStatus3.textContent = hasShield3 ? 'Yes' : 'No';
+
+        // Initialize blocks
+        for (let i = 0; i < TOTAL_BLOCKS_3; i++) {
+          const type = getRandomType3();
+          let value;
+          if (type === 'multiplier') {
+            value = Math.floor(Math.random() * 10) + 1; // 1 to 10
+          } else if (type === 'score') {
+            value = Math.floor(Math.random() * 100) + 1; // 1 to 100
+          } else {
+            value = null; // skull
+          }
+          blocks3.push({ type, value, revealed: false });
+        }
+
+        for (let i = 0; i < TOTAL_BLOCKS_3; i++) {
+          const blockElement = document.createElement('div');
+          blockElement.classList.add('block3');
+          blockElement.dataset.index = i;
+          blockElement.textContent = '?';
+          blockElement.addEventListener('click', () => handleBlockClick3(i));
+          gameBoard3.appendChild(blockElement);
+        }
+      }
+
+      function handleBlockClick3(index) {
+        const block = blocks3[index];
+        if (block.revealed) return;
+
+        block.revealed = true;
+        const blockElement = document.querySelector(`.block3[data-index="${index}"]`);
+        blockElement.classList.add('revealed');
+
+        if (block.type === 'score') {
+          score3Val += block.value;
+          blockElement.textContent = block.value;
+        } else if (block.type === 'multiplier') {
+          score3Val *= block.value;
+          blockElement.textContent = `${block.value}x`;
+        } else if (block.type === 'skull') {
+          if (hasShield3) {
+            hasShield3 = false;
+            shieldStatus3.textContent = 'No';
+            blockElement.textContent = 'Skull (Shield Used)';
+          } else {
+            blockElement.textContent = 'Skull';
+            gameOver3();
+          }
+        }
+
+        scoreLabel3.textContent = `Score: ${score3Val}`;
+      }
+
+      function gameOver3() {
+        gameOverLabel3.style.display = 'block';
+        // disable further clicks
+        const allBlocks = document.querySelectorAll('.block3');
+        allBlocks.forEach(el => el.style.pointerEvents = 'none');
+      }
+
+      // Start Game 3
+      initGame3();
+    </script>
+  </section>
+<!-- ======================== Text Section ======================== -->
+  <hr />
+  <section>
+    <h2>Prompt</h2>
+    <p>In javascript create a game with 10 rows of blocks that can be selected by the user. When selected each block will have either a random multiplier up to 10x, a failure event of a skull which signifies game over, or a score amount max of 100. There will be random potential to avoid failure events which can be capped at one. User can select a random block which will have one of the potential options. There should be a score total displayed.</p>
+  </section>
 </body>
 </html>
