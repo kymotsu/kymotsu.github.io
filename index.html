@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>All 3 Block Games in One Page</title>
+  <title>AI Game Testing</title>
   <style>
     /* ---------------------------
        Global or Shared Styling
@@ -153,7 +153,7 @@
   </style>
 </head>
 <body>
-  <h1>All 3 Games in One Page</h1>
+  <h1>AI Game Testing</h1>
 
   <!-- ========================== Game 1 ========================== -->
   <section>
@@ -426,7 +426,7 @@
         if (outcomeRoll < 0.4) {
           // 40% chance of multiplier
           const multiplier = Math.ceil(Math.random() * 10); // 1x to 10x
-          const scoreValue = Math.ceil(Math.random() * 100); // 1 to 100 score to multiply
+          const scoreValue = Math.ceil(Math.random() * 100); // 1 to 100
           return { type: 'multiplier', value: multiplier, scoreValue: scoreValue };
         } else if (outcomeRoll < 0.8) {
           // 40% chance of score
@@ -577,7 +577,7 @@
         if (block.revealed) return;
 
         block.revealed = true;
-        const blockElement = document.querySelector(`.block3[data-index="${index}"]`);
+        const blockElement = document.querySelector(`.block3[data-index=\"${index}\"]`);
         blockElement.classList.add('revealed');
 
         if (block.type === 'score') {
@@ -611,11 +611,154 @@
       initGame3();
     </script>
   </section>
-<!-- ======================== Text Section ======================== -->
+  
+  <!-- ========================== Game 4 ========================== -->
+  <section>
+    <h2>Game 4: Deepseek DeepThink R1 </h2>
+    <style>
+      .container4 {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin: 20px;
+      }
+      .row4 {
+          display: flex;
+          gap: 10px;
+      }
+      .block4 {
+          width: 100px;
+          height: 50px;
+          border: 2px solid #333;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-weight: bold;
+      }
+      #score4 {
+          font-size: 24px;
+          margin-bottom: 20px;
+      }
+      #message4 {
+          font-size: 20px;
+          color: red;
+          min-height: 30px;
+      }
+    </style>
+    <div id="score4">Score: 0</div>
+    <div id="message4"></div>
+    <div id="blocks4" class="container4"></div>
+
+    <script>
+      const gameState4 = {
+          score: 0,
+          hasAvoidChance: false,
+          isGameOver: false
+      };
+
+      function createGame4() {
+          const container = document.getElementById('blocks4');
+          
+          // Create 10 rows
+          for (let i = 0; i < 10; i++) {
+              const row = document.createElement('div');
+              row.className = 'row4';
+              
+              // Create 1 block per row (total 10 blocks)
+              const block = document.createElement('div');
+              block.className = 'block4';
+              block.textContent = '?';
+              block.addEventListener('click', handleBlockClick4);
+              row.appendChild(block);
+              
+              container.appendChild(row);
+          }
+      }
+
+      function handleBlockClick4(event) {
+          if (gameState4.isGameOver) return;
+          
+          const block = event.target;
+          if (block.dataset.revealed) return;
+          
+          const result = getBlockResult4();
+          revealBlock4(block, result);
+          updateGameState4(result);
+          updateDisplay4();
+      }
+
+      function getBlockResult4() {
+          const rand = Math.random();
+          
+          if (!gameState4.hasAvoidChance && rand < 0.05) {
+              return { type: 'avoid', value: 0 };
+          } else if (rand < 0.5) {
+              return { type: 'score', value: Math.floor(Math.random() * 100) + 1 };
+          } else if (rand < 0.8) {
+              return { type: 'multiplier', value: Math.floor(Math.random() * 9) + 2 };
+          } else {
+              return { type: 'skull', value: 0 };
+          }
+      }
+
+      function revealBlock4(block, result) {
+          block.dataset.revealed = true;
+          block.style.backgroundColor = getBlockColor4(result.type);
+          block.textContent = getBlockText4(result);
+      }
+
+      function getBlockColor4(type) {
+          return {
+              'score': '#90EE90',
+              'multiplier': '#87CEEB',
+              'skull': '#808080',
+              'avoid': '#FFD700'
+          }[type];
+      }
+
+      function getBlockText4(result) {
+          return {
+              'score': `+${result.value}`,
+              'multiplier': `${result.value}x`,
+              'skull': '💀',
+              'avoid': '🛡️'
+          }[result.type];
+      }
+
+      function updateGameState4(result) {
+          if (result.type === 'score') {
+              gameState4.score += result.value;
+          } else if (result.type === 'multiplier') {
+              gameState4.score *= result.value;
+          } else if (result.type === 'avoid') {
+              gameState4.hasAvoidChance = true;
+          } else if (result.type === 'skull') {
+              if (gameState4.hasAvoidChance) {
+                  gameState4.hasAvoidChance = false;
+                  document.getElementById('message4').textContent = 'Avoided skull!';
+              } else {
+                  gameState4.isGameOver = true;
+                  document.getElementById('message4').textContent = 'GAME OVER!';
+              }
+          }
+      }
+
+      function updateDisplay4() {
+          document.getElementById('score4').textContent = `Score: ${gameState4.score}`;
+      }
+
+      // Initialize the game
+      createGame4();
+    </script>
+  </section>
+  
+    <!-- ======================== Text Section ======================== -->
   <hr />
   <section>
     <h2>Prompt</h2>
     <p>In javascript create a game with 10 rows of blocks that can be selected by the user. When selected each block will have either a random multiplier up to 10x, a failure event of a skull which signifies game over, or a score amount max of 100. There will be random potential to avoid failure events which can be capped at one. User can select a random block which will have one of the potential options. There should be a score total displayed.</p>
   </section>
+  
 </body>
 </html>
