@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Canvas Block Game</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+    #gameContainer {
+      margin-top: 20px;
+      position: relative;
+    }
+    #scoreDisplay {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    #gameMessage {
+      margin-top: 10px;
+      font-size: 20px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Canvas Block Game</h1>
+
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="600" height="100"></canvas>
+  </div>
+
+  <div id="scoreDisplay">Score: 0</div>
+  <div id="gameMessage"></div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const gameMessage = document.getElementById('gameMessage');
+
+    // Game constants
+    const BLOCK_COUNT = 10; // Number of blocks
+    const BLOCK_WIDTH = 50;
+    const BLOCK_HEIGHT = 50;
+    const BLOCK_SPACING = 10; // Spacing between blocks
+
+    // Store each block's info
+    let blocks = [];
+
+    // Player stats
+    let score = 0;
+    let hasShield = false; // If the user can avoid one skull
+    let gameOver = false;
+
+    // Generate random blocks
+    // Each block can be:
+    // - 'score' (value up to 100)
+    // - 'multiplier' (value up to 10)
+    // - 'skull' (failure event)
+    // - 'shield' (grants one-time avoidance)
+
+    // We'll ensure there's exactly 1 shield, up to 2 or 3 skulls, some multipliers, rest scores.
+
+    function generateBlocks() {
+      // We can distribute these in a random manner
+      let potentialTypes = [];
+
+      // We'll decide how many skulls: random between 1 and 3
+      let skullCount = Math.floor(Math.random() * 3) + 1;
+
+      // We'll decide how many multipliers: random between 2 and 4
+      let multiplierCount = Math.floor(Math.random() * 3) + 2;
+
+      // We have exactly 1 shield
+      let shieldCount = 1;
+
+      // The rest are scores
+      let scoreCount = BLOCK_COUNT - (skullCount + multiplierCount + shieldCount);
+      if (scoreCount < 0) {
+        // fallback if random picks exceed the block count
+        skullCount = 2;
+        multiplierCount = 3;
+        shieldCount = 1;
+        scoreCount = BLOCK_COUNT - (skullCount + multiplierCount + shieldCount);
+      }
+
+      // Fill arrays with types
+      for (let i = 0; i < skullCount; i++) {
+        potentialTypes.push('skull');
+      }
+      for (let i = 0; i < multiplierCount; i++) {
+        potentialTypes.push('multiplier');
+      }
+      for (let i = 0; i < shieldCount; i++) {
+        potentialTypes.push('shield');
+      }
+      for (let i = 0; i < scoreCount; i++) {
+        potentialTypes.push('score');
+      }
+
+      // Shuffle the array
+      for (let i = potentialTypes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [potentialTypes[i], potentialTypes[j]] = [potentialTypes[j], potentialTypes[i]];
+      }
+
+      // Now create block objects from these types
+      blocks = potentialTypes.map((type, index) => {
+        let value;
+        if (type === 'score') {
+          value = Math.floor(Math.random() * 100) + 1; // up to 100
+        } else if (type === 'multiplier') {
+          value = Math.floor(Math.random() * 10) + 1; // up to 10
+        } else {
+          value = 0; // skull or shield doesn't need a numeric value
+        }
+
+        // Calculate position
+        const x = index * (BLOCK_WIDTH + BLOCK_SPACING) + BLOCK_SPACING;
+        const y = (canvas.height - BLOCK_HEIGHT) / 2; // center vertically
+
+        return {
+          x,
+          y,
+          width: BLOCK_WIDTH,
+          height: BLOCK_HEIGHT,
+          revealed: false,
+          type,
+          value
+        };
+      });
+    }
+
+    function drawBlocks() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      blocks.forEach((block) => {
+        // Draw block background
+        if (!block.revealed) {
+          ctx.fillStyle = '#7ea9e1'; // hidden color
+        } else {
+          // Reveal color based on type
+          if (block.type === 'score') {
+            ctx.fillStyle = '#79cc90';
+          } else if (block.type === 'multiplier') {
+            ctx.fillStyle = '#f4cf79';
+          } else if (block.type === 'skull') {
+            ctx.fillStyle = '#e17878';
+          } else if (block.type === 'shield') {
+            ctx.fillStyle = '#9d79f4';
+          }
+        }
+        ctx.fillRect(block.x, block.y, block.width, block.height);
+
+        // Outline
+        ctx.strokeStyle = '#333';
+        ctx.strokeRect(block.x, block.y, block.width, block.height);
+
+        // If revealed, draw text
+        if (block.revealed) {
+          ctx.fillStyle = '#000';
+          ctx.font = '16px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          let text;
+          if (block.type === 'score') {
+            text = `+${block.value}`;
+          } else if (block.type === 'multiplier') {
+            text = `${block.value}x`;
+          } else if (block.type === 'skull') {
+            text = 'Skull';
+          } else {
+            text = 'Shield';
+          }
+
+          ctx.fillText(text, block.x + block.width / 2, block.y + block.height / 2);
+        }
+      });
+    }
+
+    // Handle click
+    canvas.addEventListener('click', (e) => {
+      if (gameOver) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      // Check which block is clicked
+      for (let block of blocks) {
+        if (
+          clickX >= block.x &&
+          clickX <= block.x + block.width &&
+          clickY >= block.y &&
+          clickY <= block.y + block.height &&
+          !block.revealed
+        ) {
+          revealBlock(block);
+          break;
+        }
+      }
+    });
+
+    function revealBlock(block) {
+      block.revealed = true;
+
+      if (block.type === 'score') {
+        score += block.value;
+      } else if (block.type === 'multiplier') {
+        score *= block.value;
+      } else if (block.type === 'shield') {
+        hasShield = true;
+      } else if (block.type === 'skull') {
+        if (hasShield) {
+          // Use up shield
+          hasShield = false;
+        } else {
+          // Game over
+          gameOver = true;
+          gameMessage.textContent = 'Game Over! You found a skull!';
+        }
+      }
+
+      scoreDisplay.textContent = `Score: ${score}`;
+      drawBlocks();
+    }
+
+    function initGame() {
+      gameOver = false;
+      score = 0;
+      hasShield = false;
+      gameMessage.textContent = '';
+
+      generateBlocks();
+      drawBlocks();
+      scoreDisplay.textContent = 'Score: 0';
+    }
+
+    initGame();
+
+  </script>
+</body>
+</html>
