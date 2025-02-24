@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AI Game Testing</title>
+  <title>AI Game Testing with High Scores</title>
   <style>
     /* ---------------------------
        Global or Shared Styling
@@ -43,16 +43,18 @@
       margin: 30px 0;
     }
 
-    /* ---------------------------
-       Game 1 (Canvas Block Game)
-       --------------------------- */
+    .score-container {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    /* Canvas specifically for Game 1 */
     #game1Container {
       margin-top: 20px;
       position: relative;
       text-align: center;
     }
     #scoreDisplay1 {
-      margin-top: 20px;
       font-size: 24px;
       font-weight: bold;
     }
@@ -61,17 +63,14 @@
       font-size: 20px;
       color: red;
     }
-    /* Canvas dimension set inline in code. */
 
-    /* ---------------------------------------------
-       Game 2 (Grid-based Block Game with Potential)
-       --------------------------------------------- */
+    /* Game 2 grid */
     #game-container2 {
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-    #score-display2,
+    #scoreDisplay2,
     #potential-display2,
     #message-display2 {
       margin-bottom: 10px;
@@ -93,7 +92,7 @@
       line-height: 50px;
       cursor: pointer;
       font-size: 20px;
-      user-select: none; /* Prevent text selection on blocks */
+      user-select: none;
     }
     .block2:hover {
       background-color: #eee;
@@ -114,12 +113,10 @@
     }
     .game-over2 {
       opacity: 0.7;
-      pointer-events: none; /* Disable clicks when game is over */
+      pointer-events: none;
     }
 
-    /* ---------------------------------------
-       Game 3 (Block Selection, Shield Mechanic)
-       --------------------------------------- */
+    /* Game 3 block selection with shield */
     #game-board3 {
       display: grid;
       grid-template-columns: repeat(5, 50px);
@@ -142,7 +139,8 @@
       background-color: lightgray;
       color: black;
     }
-    #score3, #shield3 {
+    #score3,
+    #shield3 {
       margin: 10px 20px;
     }
     #game-over3 {
@@ -150,68 +148,205 @@
       font-size: 24px;
       color: red;
     }
+
+    /* Game 4 single block per row */
+    .container4 {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 20px;
+    }
+    .row4 {
+      display: flex;
+      gap: 10px;
+    }
+    .block4 {
+      width: 100px;
+      height: 50px;
+      border: 2px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #score4 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    #message4 {
+      font-size: 20px;
+      color: red;
+      min-height: 30px;
+    }
   </style>
 </head>
 <body>
-  <h1>AI Game Testing</h1>
+  <h1>AI Game Testing with High Scores</h1>
 
-  <!-- ========================== Game 1 ========================== -->
+  <!--
+    We place the Firebase definitions in a separate script
+    so that the main game logic can safely call window.getHighScore
+    after it's defined.
+  -->
+
+  <!-- Step 1: Firebase script (type=module) -->
+  <script type="module" id="firebase-script">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyCLxDVON7CzDCgYBatSk4KJ3xoXPB54928",
+    authDomain: "block-game-scores.firebaseapp.com",
+    databaseURL: "https://block-game-scores-default-rtdb.firebaseio.com",
+    projectId: "block-game-scores",
+    storageBucket: "block-game-scores.firebasestorage.app",
+    messagingSenderId: "963380830163",
+    appId: "1:963380830163:web:7077dffd4407168c399926",
+    measurementId: "G-Q172F4BCBB"
+  };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Expose global functions
+    window.getHighScore = (gameId, displayElementId) => {
+      const scoreRef = ref(db, `highscores/${gameId}`);
+      onValue(scoreRef, (snapshot) => {
+        const data = snapshot.val();
+        document.getElementById(displayElementId).textContent = data
+          ? `High Score: ${data.score} by ${data.name}`
+          : "High Score: None";
+      });
+    };
+
+    window.updateHighScore = (gameId, playerName, score) => {
+      if (!playerName) return;
+      const scoreRef = ref(db, `highscores/${gameId}`);
+      get(scoreRef).then((snapshot) => {
+        const data = snapshot.val();
+        if (!data || score > data.score) {
+          set(scoreRef, { name: playerName, score: score });
+          alert("🎉 New High Score!");
+        }
+      });
+    };
+  </script>
+
+  <!-- Step 2: Main game logic script -->
+  <script>
+    /**********************************************************
+     *       Let's confirm how the user wants it to behave.   *
+     **********************************************************/
+    // QUESTION TO USER: How do you want each game to behave if multiple players tie the high score?
+    // Also, do you expect to see "High Score: None" if there's no prior data?
+
+    /**********************************************************
+     *                   TEST CASES                           *
+     **********************************************************/
+    /*
+      1)  Load page with no existing high scores.
+          - Expect: Each "High Score" label reads "High Score: None".
+      2)  Manually obtain a new high score on any game.
+          - Expect: It prompts for name, updates, and an alert: "🎉 New High Score!".
+      3)  Check if lower scores do not overwrite.
+          - Expect: If we do not beat existing high score, no alert & no update.
+    */
+  </script>
+
+  <!-- ========================== Game 1 (Canvas) ========================== -->
   <section>
     <h2>Game 1: ChatGPT o1</h2>
     <div id="game1Container">
       <canvas id="gameCanvas1" width="600" height="100"></canvas>
     </div>
-    <div id="scoreDisplay1">Score: 0</div>
+    <div class="score-container">
+      <span id="scoreDisplay1">Score: 0</span> |
+      <span id="highScoreDisplay1">High Score: Loading...</span>
+    </div>
     <div id="gameMessage1"></div>
+  </section>
 
-    <script>
-      // --------------------
-      // Game 1 JavaScript
-      // --------------------
+  <hr />
+
+  <!-- ========================== Game 2 (Grid-based) ========================== -->
+  <section>
+    <h2>Game 2: Gemini 2.0 Thinking</h2>
+    <div id="game-container2">
+      <div class="score-container">
+        <span id="scoreDisplay2">Score: 0</span> |
+        <span id="highScoreDisplay2">High Score: Loading...</span>
+      </div>
+      <div id="message-display2"></div>
+      <div id="game-grid2"></div>
+    </div>
+  </section>
+
+  <hr />
+
+  <!-- ========================== Game 3 (Block Selection w/ Shield) ========================== -->
+  <section>
+    <h2>Game 3: Grok 3 Thinking</h2>
+    <div class="score-container">
+      <span id="scoreDisplay3">Score: 0</span> |
+      <span id="highScoreDisplay3">High Score: Loading...</span>
+    </div>
+    <div id="shield3">Shield: <span id="shield-status3"></span></div>
+    <div id="game-board3"></div>
+    <div id="game-over3" style="display: none; font-size:24px; color:red;">Game Over</div>
+  </section>
+
+  <hr />
+
+  <!-- ========================== Game 4 (Single Block per Row) ========================== -->
+  <section>
+    <h2>Game 4: Deepseek DeepThink R1</h2>
+    <div class="score-container">
+      <span id="scoreDisplay4">Score: 0</span> |
+      <span id="highScoreDisplay4">High Score: Loading...</span>
+    </div>
+    <div id="message4"></div>
+    <div id="blocks4" class="container4"></div>
+  </section>
+
+  <script>
+    /**********************************************************
+     *                   GAME 1 (Canvas)                     *
+     *********************************************************/
+
+    // Wait until DOM loaded, so getHighScore is definitely defined.
+    document.addEventListener('DOMContentLoaded', () => {
       const canvas1 = document.getElementById('gameCanvas1');
       const ctx1 = canvas1.getContext('2d');
 
       const scoreDisplay1 = document.getElementById('scoreDisplay1');
+      const highScoreDisplay1 = document.getElementById('highScoreDisplay1');
       const gameMessage1 = document.getElementById('gameMessage1');
 
-      // Game 1 constants
-      const BLOCK_COUNT_1 = 10; // Number of blocks
+      const BLOCK_COUNT_1 = 10;
       const BLOCK_WIDTH_1 = 50;
       const BLOCK_HEIGHT_1 = 50;
-      const BLOCK_SPACING_1 = 10; // Spacing between blocks
+      const BLOCK_SPACING_1 = 10;
 
-      // Store each block's info for Game 1
       let blocks1 = [];
-
-      // Player stats
       let score1 = 0;
-      let hasShield1 = false; // If the user can avoid one skull
+      let hasShield1 = false;
       let gameOver1 = false;
 
-      // Generate random blocks (Game 1)
       function generateBlocks1() {
         let potentialTypes1 = [];
-
-        // We'll decide how many skulls: random between 1 and 3
         let skullCount1 = Math.floor(Math.random() * 3) + 1;
-
-        // We'll decide how many multipliers: random between 2 and 4
         let multiplierCount1 = Math.floor(Math.random() * 3) + 2;
-
-        // We have exactly 1 shield
         let shieldCount1 = 1;
-
-        // The rest are scores
         let scoreCount1 = BLOCK_COUNT_1 - (skullCount1 + multiplierCount1 + shieldCount1);
+
         if (scoreCount1 < 0) {
-          // fallback if random picks exceed the block count
           skullCount1 = 2;
           multiplierCount1 = 3;
           shieldCount1 = 1;
           scoreCount1 = BLOCK_COUNT_1 - (skullCount1 + multiplierCount1 + shieldCount1);
         }
 
-        // Fill arrays with types
         for (let i = 0; i < skullCount1; i++) {
           potentialTypes1.push('skull');
         }
@@ -225,27 +360,22 @@
           potentialTypes1.push('score');
         }
 
-        // Shuffle the array
         for (let i = potentialTypes1.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [potentialTypes1[i], potentialTypes1[j]] = [potentialTypes1[j], potentialTypes1[i]];
         }
 
-        // Now create block objects from these types
         blocks1 = potentialTypes1.map((type, index) => {
           let value;
           if (type === 'score') {
-            value = Math.floor(Math.random() * 100) + 1; // up to 100
+            value = Math.floor(Math.random() * 100) + 1;
           } else if (type === 'multiplier') {
-            value = Math.floor(Math.random() * 10) + 1; // up to 10
+            value = Math.floor(Math.random() * 10) + 1;
           } else {
-            value = 0; // skull or shield doesn't need a numeric value
+            value = 0;
           }
-
-          // Calculate position
           const x = index * (BLOCK_WIDTH_1 + BLOCK_SPACING_1) + BLOCK_SPACING_1;
-          const y = (canvas1.height - BLOCK_HEIGHT_1) / 2; // center vertically
-
+          const y = (canvas1.height - BLOCK_HEIGHT_1) / 2;
           return {
             x,
             y,
@@ -260,36 +390,30 @@
 
       function drawBlocks1() {
         ctx1.clearRect(0, 0, canvas1.width, canvas1.height);
-
         blocks1.forEach((block) => {
-          // Draw block background
           if (!block.revealed) {
-            ctx1.fillStyle = '#7ea9e1'; // hidden color
+            ctx1.fillStyle = '#7ea9e1';
           } else {
-            // Reveal color based on type
             if (block.type === 'score') {
               ctx1.fillStyle = '#79cc90';
             } else if (block.type === 'multiplier') {
               ctx1.fillStyle = '#f4cf79';
             } else if (block.type === 'skull') {
               ctx1.fillStyle = '#e17878';
-            } else if (block.type === 'shield') {
+            } else {
               ctx1.fillStyle = '#9d79f4';
             }
           }
           ctx1.fillRect(block.x, block.y, block.width, block.height);
 
-          // Outline
           ctx1.strokeStyle = '#333';
           ctx1.strokeRect(block.x, block.y, block.width, block.height);
 
-          // If revealed, draw text
           if (block.revealed) {
             ctx1.fillStyle = '#000';
             ctx1.font = '16px Arial';
             ctx1.textAlign = 'center';
             ctx1.textBaseline = 'middle';
-
             let text;
             if (block.type === 'score') {
               text = `+${block.value}`;
@@ -300,21 +424,17 @@
             } else {
               text = 'Shield';
             }
-
             ctx1.fillText(text, block.x + block.width / 2, block.y + block.height / 2);
           }
         });
       }
 
-      // Handle click (Game 1)
       canvas1.addEventListener('click', (e) => {
         if (gameOver1) return;
-
         const rect = canvas1.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
 
-        // Check which block is clicked
         for (let block of blocks1) {
           if (
             clickX >= block.x &&
@@ -331,7 +451,6 @@
 
       function revealBlock1(block) {
         block.revealed = true;
-
         if (block.type === 'score') {
           score1 += block.value;
         } else if (block.type === 'multiplier') {
@@ -340,17 +459,22 @@
           hasShield1 = true;
         } else if (block.type === 'skull') {
           if (hasShield1) {
-            // Use up shield
             hasShield1 = false;
           } else {
-            // Game over
             gameOver1 = true;
             gameMessage1.textContent = 'Game Over! You found a skull!';
+            endGame1();
           }
         }
-
         scoreDisplay1.textContent = `Score: ${score1}`;
         drawBlocks1();
+      }
+
+      function endGame1() {
+        const playerName = prompt("Enter your name for the high score:");
+        if (playerName) {
+          window.updateHighScore('game1', playerName, score1);
+        }
       }
 
       function initGame1() {
@@ -358,55 +482,37 @@
         score1 = 0;
         hasShield1 = false;
         gameMessage1.textContent = '';
-
         generateBlocks1();
         drawBlocks1();
         scoreDisplay1.textContent = 'Score: 0';
+        window.getHighScore('game1', 'highScoreDisplay1');
       }
 
-      // Start Game 1
       initGame1();
-    </script>
-  </section>
 
-  <hr />
-
-  <!-- ========================== Game 2 ========================== -->
-  <section>
-    <h2>Game 2: Gemini 2.0 Thinking</h2>
-    <div id="game-container2">
-      <div id="score-display2">Score: 0</div>
-      <div id="potential-display2">Potential: Inactive</div>
-      <div id="message-display2"></div>
-      <div id="game-grid2"></div>
-    </div>
-
-    <script>
-      // --------------------
-      // Game 2 JavaScript
-      // --------------------
-      const gameGrid2 = document.getElementById('game-grid2');
-      const scoreDisplay2 = document.getElementById('score-display2');
-      const potentialDisplay2 = document.getElementById('potential-display2');
+      /**********************************************************
+       *                   GAME 2 (Grid)                       *
+       *********************************************************/
+      const scoreDisplay2 = document.getElementById('scoreDisplay2');
+      const highScoreDisplay2 = document.getElementById('highScoreDisplay2');
       const messageDisplay2 = document.getElementById('message-display2');
+      const gameGrid2 = document.getElementById('game-grid2');
 
       let score2 = 0;
       let potentialActive2 = false;
       let gameOver2 = false;
       const numRows2 = 10;
       const numCols2 = 10;
-      let blocks2 = []; // To easily manage blocks if needed
 
       function initGame2() {
         score2 = 0;
         potentialActive2 = false;
         gameOver2 = false;
-        scoreDisplay2.textContent = 'Score: 0';
-        potentialDisplay2.textContent = 'Potential: Inactive';
+        updateScoreDisplay2();
         messageDisplay2.textContent = '';
-        gameGrid2.classList.remove('game-over2');
         gameGrid2.innerHTML = '';
-        blocks2 = [];
+        gameGrid2.classList.remove('game-over2');
+        window.getHighScore('game2', 'highScoreDisplay2');
 
         for (let i = 0; i < numRows2; i++) {
           for (let j = 0; j < numCols2; j++) {
@@ -416,7 +522,6 @@
             block.dataset.col = j;
             block.addEventListener('click', handleBlockClick2);
             gameGrid2.appendChild(block);
-            blocks2.push(block);
           }
         }
       }
@@ -424,29 +529,27 @@
       function generateOutcome2() {
         const outcomeRoll = Math.random();
         if (outcomeRoll < 0.4) {
-          // 40% chance of multiplier
-          const multiplier = Math.ceil(Math.random() * 10); // 1x to 10x
-          const scoreValue = Math.ceil(Math.random() * 100); // 1 to 100
+          // multiplier
+          const multiplier = Math.ceil(Math.random() * 10);
+          const scoreValue = Math.ceil(Math.random() * 100);
           return { type: 'multiplier', value: multiplier, scoreValue: scoreValue };
         } else if (outcomeRoll < 0.8) {
-          // 40% chance of score
+          // score
           const scoreAmount = Math.ceil(Math.random() * 100);
           return { type: 'score', value: scoreAmount };
         } else if (outcomeRoll < 0.95) {
-          // 15% chance of failure
+          // failure
           return { type: 'failure' };
         } else {
-          // 5% chance of potential
+          // potential
           return { type: 'potential' };
         }
       }
 
       function handleBlockClick2(event) {
         if (gameOver2) return;
-
         const block = event.target;
         const outcome = generateOutcome2();
-
         switch (outcome.type) {
           case 'multiplier': {
             const scoreIncrease = outcome.value * outcome.scoreValue;
@@ -466,98 +569,89 @@
           case 'failure': {
             if (potentialActive2) {
               potentialActive2 = false;
-              potentialDisplay2.textContent = 'Potential: Inactive';
               messageDisplay2.textContent = 'Potential used! Failure avoided.';
               block.textContent = 'Saved!';
               block.classList.add('outcome-potential2');
             } else {
               gameOver2 = true;
-              messageDisplay2.textContent = 'Game Over! Skull found. Final Score: ' + score2;
+              messageDisplay2.textContent = `Game Over! Skull found. Final Score: ${score2}`;
               block.textContent = '💀';
               block.classList.add('outcome-failure2');
               gameGrid2.classList.add('game-over2');
+              endGame2();
             }
             break;
           }
           case 'potential': {
             potentialActive2 = true;
-            potentialDisplay2.textContent = 'Potential: Active';
             messageDisplay2.textContent = 'Potential activated! Next failure avoided.';
             block.textContent = 'P';
             block.classList.add('outcome-potential2');
             break;
           }
         }
-
-        // Disable further clicks on this block
         block.removeEventListener('click', handleBlockClick2);
         block.classList.add('clicked2');
       }
 
       function updateScoreDisplay2() {
-        scoreDisplay2.textContent = 'Score: ' + score2;
+        scoreDisplay2.textContent = `Score: ${score2}`;
       }
 
-      // Initialize Game 2 immediately
+      function endGame2() {
+        const playerName = prompt("Enter your name for the high score:");
+        if (playerName) {
+          window.updateHighScore('game2', playerName, score2);
+        }
+      }
+
       initGame2();
-    </script>
-  </section>
 
-  <hr />
+      /**********************************************************
+       *                   GAME 3 (Shield)                     *
+       *********************************************************/
+      const scoreLabel3 = document.getElementById('scoreDisplay3');
+      const highScoreDisplay3 = document.getElementById('highScoreDisplay3');
+      const shieldLabel3 = document.getElementById('shield-status3');
+      const gameBoard3 = document.getElementById('game-board3');
+      const gameOverLabel3 = document.getElementById('game-over3');
 
-  <!-- ========================== Game 3 ========================== -->
-  <section>
-    <h2>Game 3: Grok 3 Thinking</h2>
-    <div id="game-board3"></div>
-    <div id="score3">Score: 0</div>
-    <div id="shield3">Shield: <span id="shield-status3"></span></div>
-    <div id="game-over3" style="display: none;">Game Over</div>
-
-    <script>
-      // --------------------
-      // Game 3 JavaScript
-      // --------------------
+      let score3Val = 0;
+      let hasShield3 = false;
+      let gameOver3 = false;
       const ROWS_3 = 10;
       const COLS_3 = 5;
       const TOTAL_BLOCKS_3 = ROWS_3 * COLS_3;
+      let blocks3 = [];
 
-      let score3Val = 0;
-      let hasShield3 = Math.random() < 0.5; // 50% chance of shield
-      const blocks3 = [];
-
-      const gameBoard3 = document.getElementById('game-board3');
-      const scoreLabel3 = document.getElementById('score3');
-      const shieldLabel3 = document.getElementById('shield3');
-      const shieldStatus3 = document.getElementById('shield-status3');
-      const gameOverLabel3 = document.getElementById('game-over3');
-
-      // Assign random type to each block
       function getRandomType3() {
         const rand = Math.random();
-        if (rand < 0.4) return 'multiplier'; // 40% chance
-        if (rand < 0.6) return 'skull';     // 20% chance
-        return 'score';                     // 40% chance
+        if (rand < 0.4) return 'multiplier';
+        if (rand < 0.6) return 'skull';
+        return 'score';
       }
 
       function initGame3() {
         score3Val = 0;
         hasShield3 = Math.random() < 0.5;
-        blocks3.length = 0;
+        gameOver3 = false;
+        blocks3 = [];
+
         gameBoard3.innerHTML = '';
         gameOverLabel3.style.display = 'none';
+        shieldLabel3.textContent = hasShield3 ? 'Yes' : 'No';
         scoreLabel3.textContent = 'Score: 0';
-        shieldStatus3.textContent = hasShield3 ? 'Yes' : 'No';
+        window.getHighScore('game3', 'highScoreDisplay3');
 
-        // Initialize blocks
         for (let i = 0; i < TOTAL_BLOCKS_3; i++) {
           const type = getRandomType3();
           let value;
           if (type === 'multiplier') {
-            value = Math.floor(Math.random() * 10) + 1; // 1 to 10
+            value = Math.floor(Math.random() * 10) + 1;
           } else if (type === 'score') {
-            value = Math.floor(Math.random() * 100) + 1; // 1 to 100
+            value = Math.floor(Math.random() * 100) + 1;
           } else {
-            value = null; // skull
+            value = null;
           }
           blocks3.push({ type, value, revealed: false });
         }
@@ -573,11 +667,12 @@
       }
 
       function handleBlockClick3(index) {
+        if (gameOver3) return;
         const block = blocks3[index];
         if (block.revealed) return;
 
         block.revealed = true;
-        const blockElement = document.querySelector(`.block3[data-index=\"${index}\"]`);
+        const blockElement = document.querySelector(`.block3[data-index="${index}"]`);
         blockElement.classList.add('revealed');
 
         if (block.type === 'score') {
@@ -589,176 +684,152 @@
         } else if (block.type === 'skull') {
           if (hasShield3) {
             hasShield3 = false;
-            shieldStatus3.textContent = 'No';
+            shieldLabel3.textContent = 'No';
             blockElement.textContent = 'Skull (Shield Used)';
           } else {
             blockElement.textContent = 'Skull';
-            gameOver3();
+            gameOver3 = true;
+            gameOverLabel3.style.display = 'block';
+            endGame3();
+            const allBlocks = document.querySelectorAll('.block3');
+            allBlocks.forEach(el => el.style.pointerEvents = 'none');
           }
         }
-
         scoreLabel3.textContent = `Score: ${score3Val}`;
       }
 
-      function gameOver3() {
-        gameOverLabel3.style.display = 'block';
-        // disable further clicks
-        const allBlocks = document.querySelectorAll('.block3');
-        allBlocks.forEach(el => el.style.pointerEvents = 'none');
+      function endGame3() {
+        const playerName = prompt("Enter your name for the high score:");
+        if (playerName) {
+          window.updateHighScore('game3', playerName, score3Val);
+        }
       }
 
-      // Start Game 3
       initGame3();
-    </script>
-  </section>
-  
-  <!-- ========================== Game 4 ========================== -->
-  <section>
-    <h2>Game 4: Deepseek DeepThink R1 </h2>
-    <style>
-      .container4 {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          margin: 20px;
-      }
-      .row4 {
-          display: flex;
-          gap: 10px;
-      }
-      .block4 {
-          width: 100px;
-          height: 50px;
-          border: 2px solid #333;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          font-weight: bold;
-      }
-      #score4 {
-          font-size: 24px;
-          margin-bottom: 20px;
-      }
-      #message4 {
-          font-size: 20px;
-          color: red;
-          min-height: 30px;
-      }
-    </style>
-    <div id="score4">Score: 0</div>
-    <div id="message4"></div>
-    <div id="blocks4" class="container4"></div>
 
-    <script>
+      /**********************************************************
+       *                   GAME 4 (Rows)                       *
+       *********************************************************/
+      const scoreDisplay4 = document.getElementById('scoreDisplay4');
+      const highScoreDisplay4 = document.getElementById('highScoreDisplay4');
+      const message4 = document.getElementById('message4');
+      const blocks4Container = document.getElementById('blocks4');
+
       const gameState4 = {
-          score: 0,
-          hasAvoidChance: false,
-          isGameOver: false
+        score: 0,
+        hasAvoidChance: false,
+        isGameOver: false
       };
 
       function createGame4() {
-          const container = document.getElementById('blocks4');
-          
-          // Create 10 rows
-          for (let i = 0; i < 10; i++) {
-              const row = document.createElement('div');
-              row.className = 'row4';
-              
-              // Create 1 block per row (total 10 blocks)
-              const block = document.createElement('div');
-              block.className = 'block4';
-              block.textContent = '?';
-              block.addEventListener('click', handleBlockClick4);
-              row.appendChild(block);
-              
-              container.appendChild(row);
-          }
+        blocks4Container.innerHTML = '';
+        for (let i = 0; i < 10; i++) {
+          const row = document.createElement('div');
+          row.className = 'row4';
+          const block = document.createElement('div');
+          block.className = 'block4';
+          block.textContent = '?';
+          block.addEventListener('click', handleBlockClick4);
+          row.appendChild(block);
+          blocks4Container.appendChild(row);
+        }
       }
 
       function handleBlockClick4(event) {
-          if (gameState4.isGameOver) return;
-          
-          const block = event.target;
-          if (block.dataset.revealed) return;
-          
-          const result = getBlockResult4();
-          revealBlock4(block, result);
-          updateGameState4(result);
-          updateDisplay4();
+        if (gameState4.isGameOver) return;
+        const block = event.target;
+        if (block.dataset.revealed) return;
+
+        const result = getBlockResult4();
+        revealBlock4(block, result);
+        updateGameState4(result);
+        updateDisplay4();
       }
 
       function getBlockResult4() {
-          const rand = Math.random();
-          
-          if (!gameState4.hasAvoidChance && rand < 0.05) {
-              return { type: 'avoid', value: 0 };
-          } else if (rand < 0.5) {
-              return { type: 'score', value: Math.floor(Math.random() * 100) + 1 };
-          } else if (rand < 0.8) {
-              return { type: 'multiplier', value: Math.floor(Math.random() * 9) + 2 };
-          } else {
-              return { type: 'skull', value: 0 };
-          }
+        const rand = Math.random();
+        if (!gameState4.hasAvoidChance && rand < 0.05) {
+          return { type: 'avoid', value: 0 };
+        } else if (rand < 0.5) {
+          return { type: 'score', value: Math.floor(Math.random() * 100) + 1 };
+        } else if (rand < 0.8) {
+          return { type: 'multiplier', value: Math.floor(Math.random() * 9) + 2 };
+        } else {
+          return { type: 'skull', value: 0 };
+        }
       }
 
       function revealBlock4(block, result) {
-          block.dataset.revealed = true;
-          block.style.backgroundColor = getBlockColor4(result.type);
-          block.textContent = getBlockText4(result);
+        block.dataset.revealed = true;
+        block.style.backgroundColor = getBlockColor4(result.type);
+        block.textContent = getBlockText4(result);
       }
 
       function getBlockColor4(type) {
-          return {
-              'score': '#90EE90',
-              'multiplier': '#87CEEB',
-              'skull': '#808080',
-              'avoid': '#FFD700'
-          }[type];
+        return {
+          'score': '#90EE90',
+          'multiplier': '#87CEEB',
+          'skull': '#808080',
+          'avoid': '#FFD700'
+        }[type];
       }
 
       function getBlockText4(result) {
-          return {
-              'score': `+${result.value}`,
-              'multiplier': `${result.value}x`,
-              'skull': '💀',
-              'avoid': '🛡️'
-          }[result.type];
+        return {
+          'score': `+${result.value}`,
+          'multiplier': `${result.value}x`,
+          'skull': '💀',
+          'avoid': '🛡️'
+        }[result.type];
       }
 
       function updateGameState4(result) {
-          if (result.type === 'score') {
-              gameState4.score += result.value;
-          } else if (result.type === 'multiplier') {
-              gameState4.score *= result.value;
-          } else if (result.type === 'avoid') {
-              gameState4.hasAvoidChance = true;
-          } else if (result.type === 'skull') {
-              if (gameState4.hasAvoidChance) {
-                  gameState4.hasAvoidChance = false;
-                  document.getElementById('message4').textContent = 'Avoided skull!';
-              } else {
-                  gameState4.isGameOver = true;
-                  document.getElementById('message4').textContent = 'GAME OVER!';
-              }
+        if (result.type === 'score') {
+          gameState4.score += result.value;
+        } else if (result.type === 'multiplier') {
+          gameState4.score *= result.value;
+        } else if (result.type === 'avoid') {
+          gameState4.hasAvoidChance = true;
+        } else if (result.type === 'skull') {
+          if (gameState4.hasAvoidChance) {
+            gameState4.hasAvoidChance = false;
+            message4.textContent = 'Avoided skull!';
+          } else {
+            gameState4.isGameOver = true;
+            message4.textContent = 'GAME OVER!';
+            endGame4();
           }
+        }
       }
 
       function updateDisplay4() {
-          document.getElementById('score4').textContent = `Score: ${gameState4.score}`;
+        scoreDisplay4.textContent = `Score: ${gameState4.score}`;
       }
 
-      // Initialize the game
-      createGame4();
-    </script>
-  </section>
-  
-    <!-- ======================== Text Section ======================== -->
+      function endGame4() {
+        const playerName = prompt("Enter your name for the high score:");
+        if (playerName) {
+          window.updateHighScore('game4', playerName, gameState4.score);
+        }
+      }
+
+      function initGame4() {
+        gameState4.score = 0;
+        gameState4.hasAvoidChance = false;
+        gameState4.isGameOver = false;
+        message4.textContent = '';
+        updateDisplay4();
+        createGame4();
+        window.getHighScore('game4', 'highScoreDisplay4');
+      }
+
+      initGame4();
+    });
+  </script>
   <hr />
   <section>
     <h2>Prompt</h2>
     <p>In javascript create a game with 10 rows of blocks that can be selected by the user. When selected each block will have either a random multiplier up to 10x, a failure event of a skull which signifies game over, or a score amount max of 100. There will be random potential to avoid failure events which can be capped at one. User can select a random block which will have one of the potential options. There should be a score total displayed.</p>
   </section>
-  
 </body>
 </html>
