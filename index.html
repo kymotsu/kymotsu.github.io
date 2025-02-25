@@ -209,6 +209,14 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    const auth = getAuth(app);
+    signInAnonymously(auth)
+      .then(() => {
+        console.log("[Firebase] Anonymous user signed in for production.");
+      })
+      .catch((err) => console.error("[Firebase] Anonymous sign-in error:", err));
+        
     // Expose global functions
     window.getHighScore = (gameId, displayElementId) => {
       const scoreRef = ref(db, `highscores/${gameId}`);
