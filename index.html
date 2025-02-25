@@ -194,14 +194,6 @@
   <script type="module" id="firebase-script">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    const auth = getAuth(app);
-    signInAnonymously(auth)
-      .then(() => {
-        console.log("[Firebase] Anonymous user signed in for production.");
-      })
-      .catch((err) => console.error("[Firebase] Anonymous sign-in error:", err));
-
 
     const firebaseConfig = {
     apiKey: "AIzaSyCLxDVON7CzDCgYBatSk4KJ3xoXPB54928",
