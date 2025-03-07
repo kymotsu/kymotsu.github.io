@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Path Emulation with Sensor Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; overflow-x: hidden; overscroll-behavior: none; }
+        .sensor-data { margin-bottom: 20px; padding: 10px; }
+        button { padding: 20px; font-size: 18px; margin: 20px; width: calc(100% - 40px); border: none; background-color: #007bff; color: white; border-radius: 8px; touch-action: none; }
+        .recorded-data { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; overflow-x: auto; max-height: 150px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+        #threeContainer { width: 100%; height: 50vh; border: 1px solid #ccc; background-color: #e0e0e0; position: relative; }
+        .chart-container { position: relative; width: 100%; height: 200px; max-width: 100%; border: 1px solid black; }
+        canvas { width: 100% !important; height: 100% !important; }
+        #webgl-error { color: red; position: absolute; top: 10px; left: 10px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <h1 style="padding: 10px;">3D Sensor Data Visualization and Path Emulation</h1>
+    <button id="requestPermissionsButton">Request Sensor Permissions</button>
+
+    <div class="sensor-data">
+        <h2>Accelerometer</h2>
+        <p>X-axis: <span id="acc-x">0</span> m/s²</p>
+        <p>Y-axis: <span id="acc-y">0</span> m/s²</p>
+        <p>Z-axis: <span id="acc-z">0</span> m/s²</p>
+        <div class="chart-container"><canvas id="accChart"></canvas></div>
+    </div>
+
+    <div class="sensor-data">
+        <h2>Gyroscope</h2>
+        <p>Alpha (Z-axis): <span id="gyro-alpha">0</span> °</p>
+        <p>Beta (X-axis): <span id="gyro-beta">0</span> °</p>
+        <p>Gamma (Y-axis): <span id="gyro-gamma">0</span> °</p>
+        <div class="chart-container"><canvas id="gyroChart"></canvas></div>
+    </div>
+
+    <button id="recordButton">Hold to Record Data</button>
+    <button id="fakeDataButton">Generate Fake Data</button>
+
+    <div class="recorded-data" id="recordedData">
+        <h2>Recorded Data</h2>
+        <pre id="dataOutput">Hold to record or tap to generate data...</pre>
+    </div>
+
+    <div id="threeContainer"></div>
+
+    <script>
+        const maxDataPoints = 50;
+        let isRecording = false;
+        let recordedData = [];
+        let scene, camera, renderer, controls;
+        let blueDot; // Global variable for the blue dot
+        let animationStartTime = null; // Tracks when the animation begins
+        let animationFrameId = null; // Tracks the animation frame ID for cancellation
+        let isAnimating = false; // Tracks if animation is currently running
+        let points = []; // Store points globally for animateDot access
+        let totalDuration = 0; // Store total duration globally
+        let dataForAnimation = []; // Store data globally
+
+        // Chart setup
+        const accCtx = document.getElementById('accChart').getContext('2d');
+        const accChart = new Chart(accCtx, {
+            type: 'line',
+            data: { labels: Array(maxDataPoints).fill(''), datasets: [
+                { label: 'X-axis', data: [], borderColor: 'red', fill: false },
+                { label: 'Y-axis', data: [], borderColor: 'green', fill: false },
+                { label: 'Z-axis', data: [], borderColor: 'blue', fill: false }
+            ]},
+            options: { animation: false, scales: { x: { display: false }, y: { suggestedMin: -20, suggestedMax: 20 } }, maintainAspectRatio: false, responsive: true }
+        });
+
+        const gyroCtx = document.getElementById('gyroChart').getContext('2d');
+        const gyroChart = new Chart(gyroCtx, {
+            type: 'line',
+            data: { labels: Array(maxDataPoints).fill(''), datasets: [
+                { label: 'Alpha', data: [], borderColor: 'orange', fill: false },
+                { label: 'Beta', data: [], borderColor: 'purple', fill: false },
+                { label: 'Gamma', data: [], borderColor: 'cyan', fill: false }
+            ]},
+            options: { animation: false, scales: { x: { display: false }, y: { suggestedMin: -180, suggestedMax: 180 } }, maintainAspectRatio: false, responsive: true }
+        });
+
+        function init3D() {
+            const container = document.getElementById('threeContainer');
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (!gl) {
+                container.innerHTML = '<p id="webgl-error">WebGL not supported. 3D viewer unavailable.</p>';
+                return false;
+            }
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight * 0.5), 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight * 0.5);
+            container.innerHTML = '';
+            container.appendChild(renderer.domElement);
+
+            try {
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+            } catch (error) {
+                document.getElementById('dataOutput').textContent = "Failed to initialize OrbitControls: " + error.message;
+                console.error("OrbitControls init error:", error);
+            }
+
+            const gridHelper = new THREE.GridHelper(100, 50); // Larger grid size
+            gridHelper.material.color.set(0x888888); // Gray color for visibility
+            scene.add(gridHelper);
+
+            const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+            const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            scene.add(cube);
+
+            camera.position.set(0, 10, 10);
+            camera.lookAt(0, 0, 0);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / (window.innerHeight * 0.5);
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight * 0.5);
+            });
+
+            animate();
+            return true;
+        }
+
+        function animate() {
+            if (renderer) {
+                requestAnimationFrame(animate);
+                if (controls) controls.update();
+                if (isAnimating && blueDot) {
+                    // Ensure the dot is visible and in the scene
+                    if (!scene.children.includes(blueDot)) {
+                        console.log("Blue dot missing from scene, re-adding.");
+                        scene.add(blueDot);
+                    }
+                    blueDot.visible = true;
+                }
+                renderer.render(scene, camera);
+            }
+        }
+
+        function updateChart(chart, newData) {
+            chart.data.labels.push('');
+            if (chart.data.labels.length > maxDataPoints) chart.data.labels.shift();
+            chart.data.datasets.forEach((dataset, index) => {
+                dataset.data.push(newData[index]);
+                if (dataset.data.length > maxDataPoints) dataset.data.shift();
+            });
+            chart.update('none');
+        }
+
+        function stopAnimation() {
+            if (animationFrameId !== null) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            isAnimating = false;
+            animationStartTime = null;
+            console.log("Animation stopped.");
+        }
+
+        function animateDot(timestamp) {
+            if (!isAnimating) {
+                console.log("Animation aborted.");
+                return;
+            }
+
+            // Set start time on first frame
+            if (animationStartTime === null) {
+                animationStartTime = timestamp;
+            }
+
+            const elapsed = timestamp - animationStartTime; // Time since animation started (ms)
+            const progress = elapsed / totalDuration; // Fraction of total duration
+            console.log("Animation progress:", progress, "Elapsed:", elapsed, "Total Duration:", totalDuration);
+
+            if (progress >= 1) {
+                blueDot.position.copy(points[points.length - 1]); // Ensure it ends at the last point
+                document.getElementById('dataOutput').textContent = `Animation completed (${(totalDuration / 1000).toFixed(2)}s).`;
+                isAnimating = false;
+                animationFrameId = null;
+                animationStartTime = null;
+                console.log("Animation finished.");
+                return;
+            }
+
+            // Find the corresponding data point based on elapsed time
+            const targetTime = dataForAnimation[0].timestamp + (progress * totalDuration);
+            let currentIndex = 0;
+            for (let i = 0; i < dataForAnimation.length; i++) {
+                if (dataForAnimation[i].timestamp >= targetTime) {
+                    currentIndex = i - 1;
+                    break;
+                }
+                currentIndex = i;
+            }
+            if (currentIndex < 0) currentIndex = 0;
+            if (currentIndex >= points.length) currentIndex = points.length - 1;
+
+            // Move the dot to the current position
+            blueDot.position.copy(points[currentIndex]);
+            console.log("Blue dot position:", blueDot.position.x, blueDot.position.y, blueDot.position.z, "Visible:", blueDot.visible);
+
+            animationFrameId = requestAnimationFrame(animateDot);
+        }
+
+        function visualize3DPath(data) {
+            try {
+                if (!scene || !renderer) {
+                    document.getElementById('dataOutput').textContent = "3D renderer not initialized.";
+                    console.error("Renderer or scene not initialized.");
+                    return;
+                }
+
+                // Stop any ongoing animation
+                stopAnimation();
+
+                // Clear previous path objects, but preserve the blue dot
+                const childrenToRemove = scene.children.filter(child => child !== blueDot && child !== scene.children[0] && child !== scene.children[1]);
+                childrenToRemove.forEach(child => scene.remove(child));
+
+                if (!data || data.length === 0) {
+                    document.getElementById('dataOutput').textContent = "No data to display.";
+                    console.log("No data to visualize.");
+                    return;
+                }
+
+                // Calculate the path points from accelerometer data
+                points = [];
+                let position = new THREE.Vector3(0, 0, 0);
+                const dt = 0.1; // Fixed time step for path calculation
+
+                data.forEach(entry => {
+                    position.x += (entry.accX || 0) * dt;
+                    position.y += (entry.accY || 0) * dt;
+                    position.z += (entry.accZ || 0) * dt;
+                    points.push(position.clone());
+                });
+
+                // Draw the red line for the full path
+                const material = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 });
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(geometry, material);
+                scene.add(line);
+
+                // Create or reset the blue dot
+                if (!blueDot) {
+                    const dotGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+                    const dotMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // Blue color
+                    blueDot = new THREE.Mesh(dotGeometry, dotMaterial);
+                    scene.add(blueDot);
+                    console.log("Created new blue dot.");
+                } else {
+                    console.log("Reusing existing blue dot.");
+                }
+                blueDot.position.copy(points[0]); // Start at the beginning
+                blueDot.visible = true; // Ensure visibility
+                if (!scene.children.includes(blueDot)) {
+                    scene.add(blueDot);
+                    console.log("Re-added blue dot to scene.");
+                }
+
+                // Center the camera on the path
+                const box = new THREE.Box3().setFromPoints(points);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z, 10);
+                camera.position.set(center.x, center.y + maxDim, center.z + maxDim);
+                camera.lookAt(center);
+                if (controls) {
+                    controls.target.copy(center);
+                    controls.update();
+                }
+
+                // Set up animation variables
+                totalDuration = data[data.length - 1].timestamp - data[0].timestamp; // Total recording time in ms
+                dataForAnimation = data;
+                isAnimating = true;
+                animationStartTime = null; // Reset to null, will be set in animateDot
+
+                // Force an initial render to ensure the scene updates
+                renderer.render(scene, camera);
+
+                // Start the animation
+                document.getElementById('dataOutput').textContent = `Animating ${data.length} points over ${(totalDuration / 1000).toFixed(2)}s...`;
+                console.log("Starting animation with total duration:", totalDuration / 1000, "seconds");
+                animationFrameId = requestAnimationFrame(animateDot);
+
+            } catch (error) {
+                document.getElementById('dataOutput').textContent = `Visualization error: ${error.message}`;
+                console.error("Visualization error:", error);
+            }
+        }
+
+        function startRecording(e) {
+            e.preventDefault();
+            stopAnimation(); // Stop any ongoing animation
+            isRecording = true;
+            recordedData = [];
+            document.getElementById('dataOutput').textContent = "Recording started...";
+            console.log("Recording started.");
+        }
+
+        function stopRecording(e) {
+            e.preventDefault();
+            if (isRecording) {
+                isRecording = false;
+                document.getElementById('dataOutput').textContent = `Recording stopped. Preparing animation...`;
+                console.log("Recording stopped, starting visualization.");
+                visualize3DPath(recordedData);
+            }
+        }
+
+        function generateFakeData(e) {
+            e.preventDefault();
+            stopAnimation(); // Stop any ongoing animation
+            const fakeData = [];
+            const startTime = performance.now();
+            for (let i = 0; i < 50; i++) {
+                fakeData.push({
+                    accX: i < 40 ? 0.2 * i : 0, // 8s movement (40 points), 2s idle (10 points)
+                    accY: 0,
+                    accZ: 0,
+                    alpha: 0,
+                    beta: 0,
+                    gamma: 0,
+                    timestamp: startTime + (i * 200) // Simulate 10s total (50 points * 200ms each)
+                });
+            }
+            document.getElementById('dataOutput').textContent = "Generating fake data...";
+            console.log("Generating fake data.");
+            visualize3DPath(fakeData);
+        }
+
+        function requestPermissions(e) {
+            e.preventDefault();
+            document.getElementById('dataOutput').textContent = "Requesting sensor permissions...";
+            Promise.all([
+                typeof DeviceMotionEvent.requestPermission === 'function' ? DeviceMotionEvent.requestPermission() : Promise.resolve('granted'),
+                typeof DeviceOrientationEvent.requestPermission === 'function' ? DeviceOrientationEvent.requestPermission() : Promise.resolve('granted')
+            ])
+            .then(([motionState, orientationState]) => {
+                document.getElementById('dataOutput').textContent = `Permissions: Motion ${motionState}, Orientation ${orientationState}. Move device to see data.`;
+            })
+            .catch(() => {
+                document.getElementById('dataOutput').textContent = "Permission request failed. Check device settings.";
+            });
+        }
+
+        const recordButton = document.getElementById('recordButton');
+        const fakeDataButton = document.getElementById('fakeDataButton');
+        const requestPermissionsButton = document.getElementById('requestPermissionsButton');
+
+        recordButton.addEventListener('touchstart', startRecording);
+        recordButton.addEventListener('touchend', stopRecording);
+        recordButton.addEventListener('mousedown', startRecording);
+        recordButton.addEventListener('mouseup', stopRecording);
+
+        fakeDataButton.addEventListener('touchstart', generateFakeData);
+        fakeDataButton.addEventListener('mousedown', generateFakeData);
+
+        requestPermissionsButton.addEventListener('touchstart', requestPermissions);
+        requestPermissionsButton.addEventListener('mousedown', requestPermissions);
+
+        let latestData = { accX: 0, accY: 0, accZ: 0, alpha: 0, beta: 0, gamma: 0 };
+
+        window.addEventListener('devicemotion', (event) => {
+            const accX = event.accelerationIncludingGravity?.x ?? 0;
+            const accY = event.accelerationIncludingGravity?.y ?? 0;
+            const accZ = event.accelerationIncludingGravity?.z ?? 0;
+
+            latestData.accX = accX;
+            latestData.accY = accY;
+            latestData.accZ = accZ;
+
+            document.getElementById('acc-x').textContent = accX.toFixed(2);
+            document.getElementById('acc-y').textContent = accY.toFixed(2);
+            document.getElementById('acc-z').textContent = accZ.toFixed(2);
+
+            updateChart(accChart, [accX, accY, accZ]);
+
+            if (isRecording) {
+                recordedData.push({ 
+                    ...latestData, 
+                    timestamp: performance.now() // Record timestamp in milliseconds
+                });
+            }
+        });
+
+        window.addEventListener('deviceorientation', (event) => {
+            const alpha = event.alpha ?? 0;
+            const beta = event.beta ?? 0;
+            const gamma = event.gamma ?? 0;
+
+            latestData.alpha = alpha;
+            latestData.beta = beta;
+            latestData.gamma = gamma;
+
+            document.getElementById('gyro-alpha').textContent = alpha.toFixed(2);
+            document.getElementById('gyro-beta').textContent = beta.toFixed(2);
+            document.getElementById('gyro-gamma').textContent = gamma.toFixed(2);
+
+            updateChart(gyroChart, [alpha, beta, gamma]);
+        });
+
+        window.addEventListener('load', () => {
+            if (!init3D()) {
+                console.log("Failed to initialize 3D viewer.");
+            }
+        });
+    </script>
+</body>
+</html>
