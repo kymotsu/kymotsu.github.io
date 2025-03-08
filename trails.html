@@ -97,6 +97,31 @@
             text-shadow: 0 0 5px #00FFFF;
             font-size: 14px;
         }
+        .mobile-controls {
+            display: none;
+            margin-top: 20px;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .mobile-controls button {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            padding: 0;
+            background: #444;
+            border-radius: 50%;
+        }
+        .mobile-controls .ability-btn {
+            width: 60px;
+            height: 60px;
+            background: #FF00FF;
+        }
+        @media (max-width: 768px) and (pointer: coarse) {
+            .mobile-controls {
+                display: flex;
+            }
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -121,7 +146,7 @@
             <button id="settingsButton">Settings</button>
         </div>
         <canvas id="gameCanvas"></canvas>
-        <div class="ability-indicator" id="abilityIndicator">Ability: Ready (Space)</div>
+        <div class="ability-indicator" id="abilityIndicator">Ability: Ready (Touch)</div>
         <button id="restartButton">Restart</button>
         <button id="replayButton">Replay Last Game</button>
         <div class="menu-overlay" id="pauseMenu">
@@ -138,6 +163,17 @@
                 <label>Ability Key:</label><button id="abilityKey" data-key=" ">Space</button>
             </div>
             <button id="closeSettings">Close</button>
+        </div>
+        <div class="mobile-controls" id="mobileControls">
+            <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; justify-items: center;">
+                <div></div>
+                <button id="upButton">↑</button>
+                <div></div>
+                <button id="leftButton">←</button>
+                <button id="downButton">↓</button>
+                <button id="rightButton">→</button>
+            </div>
+            <button id="abilityButton" class="ability-btn">✨</button>
         </div>
     </div>
     <script>
@@ -156,6 +192,12 @@
         const abilityIndicator = document.getElementById('abilityIndicator');
         const obstacleCountSelect = document.getElementById('obstacleCount');
         const aiCountSelect = document.getElementById('aiCount');
+        const mobileControls = document.getElementById('mobileControls');
+        const upButton = document.getElementById('upButton');
+        const downButton = document.getElementById('downButton');
+        const leftButton = document.getElementById('leftButton');
+        const rightButton = document.getElementById('rightButton');
+        const abilityButton = document.getElementById('abilityButton');
 
         // Responsive canvas sizing
         function resizeCanvas() {
@@ -174,6 +216,7 @@
         let replayData = null;
         let replayFrame = 0;
         let isReplay = false;
+        let isMobile = window.matchMedia("(max-width: 768px) and (pointer: coarse)").matches;
 
         // Player class
         class Player {
@@ -209,7 +252,6 @@
                 if (this.powerUpTimer > 0) this.powerUpTimer--;
                 if (this.powerUpTimer <= 0) this.powerUp = null;
 
-                // Record move for replay
                 if (!isReplay) {
                     if (!replayData.players[this.isAI ? players.indexOf(this) : 0].moves) {
                         replayData.players[this.isAI ? players.indexOf(this) : 0].moves = [];
@@ -231,12 +273,12 @@
                             newX = target.x + Math.floor(Math.random() * 5) - 2;
                             newY = target.y + Math.floor(Math.random() * 5) - 2;
                             attempts++;
-                            if (attempts > 50) break; // Prevent infinite loop
+                            if (attempts > 50) break;
                         } while (!this.isSafe(newX, newY) || players.some(p => p.x === newX && p.y === newY));
-                        if (attempts <= 50) { // Only teleport if a valid spot is found
+                        if (attempts <= 50) {
                             this.x = newX;
                             this.y = newY;
-                            this.trail.push({ x: this.x, y: this.y }); // Add new position to trail
+                            this.trail.push({ x: this.x, y: this.y });
                         }
                     } else if (this.aiType === 'trapper') {
                         const barrier = { x: this.x + this.direction.x * 2, y: this.y + this.direction.y * 2, timer: 30 };
@@ -356,7 +398,7 @@
             isSafe(x, y) {
                 if (x < 0 || x >= tileCount || y < 0 || y >= tileCount) return false;
                 for (let player of players) {
-                    if (x === player.x && y === player.y) return false; // Prevent teleporting onto any player
+                    if (x === player.x && y === player.y) return false;
                     for (let segment of player.trail) {
                         if (x === segment.x && y === segment.y) return false;
                     }
@@ -510,6 +552,44 @@
             }
         });
 
+        // Handle mobile controls
+        function handleMobileInput(directionOrAbility) {
+            const player = players[0];
+            if (!player || !gameStarted || isPaused || isReplay) return;
+            const now = Date.now();
+            if (now - lastKeyTime < keyCooldown) return;
+            lastKeyTime = now;
+
+            if (directionOrAbility === 'ability' && player.abilityReady) {
+                player.useAbility();
+            } else {
+                let newDirection = null;
+                switch (directionOrAbility) {
+                    case 'up':
+                        newDirection = { x: 0, y: -1 };
+                        break;
+                    case 'down':
+                        newDirection = { x: 0, y: 1 };
+                        break;
+                    case 'left':
+                        newDirection = { x: -1, y: 0 };
+                        break;
+                    case 'right':
+                        newDirection = { x: 1, y: 0 };
+                        break;
+                }
+                if (newDirection && player.isValidTurn(newDirection)) {
+                    player.nextDirection = newDirection;
+                }
+            }
+        }
+
+        upButton.addEventListener('touchstart', (e) => { e.preventDefault(); handleMobileInput('up'); });
+        downButton.addEventListener('touchstart', (e) => { e.preventDefault(); handleMobileInput('down'); });
+        leftButton.addEventListener('touchstart', (e) => { e.preventDefault(); handleMobileInput('left'); });
+        rightButton.addEventListener('touchstart', (e) => { e.preventDefault(); handleMobileInput('right'); });
+        abilityButton.addEventListener('touchstart', (e) => { e.preventDefault(); handleMobileInput('ability'); });
+
         // Pause menu
         function togglePause() {
             isPaused = !isPaused;
@@ -543,7 +623,7 @@
 
         // Update ability indicator
         function updateAbilityIndicator() {
-            abilityIndicator.textContent = `Ability: ${players[0]?.abilityReady ? 'Ready' : 'Used'} (Space)`;
+            abilityIndicator.textContent = `Ability: ${players[0]?.abilityReady ? 'Ready' : 'Used'} ${isMobile ? '(Touch)' : '(Space)'}`;
         }
 
         // Initialize game
