@@ -22,6 +22,9 @@
             max-width: 90vw;
             max-height: 90vh;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         canvas {
             border: 2px solid #00FFFF;
@@ -98,11 +101,12 @@
             font-size: 14px;
         }
         .mobile-controls {
-            display: none;
-            margin-top: 20px;
+            display: none; /* Hidden by default, shown via JS on mobile */
+            margin-top: 10px;
             justify-content: center;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
         .mobile-controls button {
             width: 50px;
@@ -111,15 +115,24 @@
             padding: 0;
             background: #444;
             border-radius: 50%;
+            touch-action: manipulation; /* Prevent pinch/zoom */
         }
         .mobile-controls .ability-btn {
             width: 60px;
             height: 60px;
             background: #FF00FF;
         }
-        @media (max-width: 768px) and (pointer: coarse) {
+        /* Ensure visibility on mobile */
+        @media (max-width: 1024px) {
+            .game-container {
+                padding: 10px;
+            }
+            canvas {
+                max-width: 90vw;
+                max-height: 60vh;
+            }
             .mobile-controls {
-                display: flex;
+                margin-top: 5px;
             }
         }
     </style>
@@ -165,7 +178,7 @@
             <button id="closeSettings">Close</button>
         </div>
         <div class="mobile-controls" id="mobileControls">
-            <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 10px; justify-items: center;">
+            <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 5px; justify-items: center;">
                 <div></div>
                 <button id="upButton">↑</button>
                 <div></div>
@@ -201,7 +214,7 @@
 
         // Responsive canvas sizing
         function resizeCanvas() {
-            const size = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.8, 600);
+            const size = Math.min(window.innerWidth * 0.8, window.innerHeight * 0.6, 600); // Adjusted for mobile
             canvas.width = size;
             canvas.height = size;
             gridSize = size / tileCount;
@@ -216,7 +229,13 @@
         let replayData = null;
         let replayFrame = 0;
         let isReplay = false;
-        let isMobile = window.matchMedia("(max-width: 768px) and (pointer: coarse)").matches;
+        let isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0; // Broader mobile detection
+
+        // Show mobile controls if on a touch device
+        if (isMobile) {
+            mobileControls.style.display = 'flex';
+            console.log("Mobile device detected, showing controls");
+        }
 
         // Player class
         class Player {
@@ -560,8 +579,11 @@
             if (now - lastKeyTime < keyCooldown) return;
             lastKeyTime = now;
 
+            console.log(`Mobile input: ${directionOrAbility}`); // Debug log
+
             if (directionOrAbility === 'ability' && player.abilityReady) {
                 player.useAbility();
+                console.log("Ability triggered");
             } else {
                 let newDirection = null;
                 switch (directionOrAbility) {
@@ -580,10 +602,12 @@
                 }
                 if (newDirection && player.isValidTurn(newDirection)) {
                     player.nextDirection = newDirection;
+                    console.log(`Direction set: ${JSON.stringify(newDirection)}`);
                 }
             }
         }
 
+        // Add touch event listeners
         upButton.addEventListener('touchstart', (e) => { e.preventDefault(); handleMobileInput('up'); });
         downButton.addEventListener('touchstart', (e) => { e.preventDefault(); handleMobileInput('down'); });
         leftButton.addEventListener('touchstart', (e) => { e.preventDefault(); handleMobileInput('left'); });
