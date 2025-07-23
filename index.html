@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam Friends Game Finder</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fab fa-steam"></i> Steam Friends Game Finder</h1>
+            <p>Find games you and your friends can play together</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Friends Management Section -->
+            <section class="friends-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-users"></i> Manage Friends</h2>
+                    <button id="add-friend-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Friend
+                    </button>
+                </div>
+
+                <!-- Add Friend Form -->
+                <div id="add-friend-form" class="add-friend-form hidden">
+                    <div class="form-group">
+                        <label for="friend-name">Friend Name:</label>
+                        <input type="text" id="friend-name" placeholder="Enter friend's display name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="steam-id">Steam ID:</label>
+                        <input type="text" id="steam-id" placeholder="Enter Steam ID (17-digit number)" required>
+                        <small>You can find Steam ID using sites like steamid.io</small>
+                    </div>
+                    <div class="form-actions">
+                        <button id="save-friend-btn" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Friend
+                        </button>
+                        <button id="cancel-friend-btn" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Friends List -->
+                <div class="friends-list" id="friends-list">
+                    <div class="no-friends" id="no-friends">
+                        <i class="fas fa-user-plus"></i>
+                        <p>No friends added yet. Add some friends to get started!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Game Session Section -->
+            <section class="session-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-gamepad"></i> Find Common Games</h2>
+                    <button id="find-games-btn" class="btn btn-primary" disabled>
+                        <i class="fas fa-search"></i> Find Games
+                    </button>
+                </div>
+
+                <div class="selected-friends" id="selected-friends">
+                    <p>Select friends to find common games</p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loading-state" class="loading-state hidden">
+                    <div class="spinner"></div>
+                    <p>Fetching game libraries...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="error-state" class="error-state hidden">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p id="error-message">An error occurred</p>
+                    <button id="retry-btn" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                </div>
+
+                <!-- Results Section -->
+                <div id="results-section" class="results-section hidden">
+                    <div class="results-header">
+                        <h3>Common Games Found</h3>
+                        <button id="refresh-games-btn" class="btn btn-secondary">
+                            <i class="fas fa-sync-alt"></i> Get Different Games
+                        </button>
+                    </div>
+                    <div id="games-grid" class="games-grid">
+                        <!-- Games will be dynamically populated here -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Steam Login Modal -->
+        <div id="steam-login-modal" class="modal">
+            <div class="modal-content">
+                <h3><i class="fab fa-steam"></i> Welcome to Steam Game Finder</h3>
+                
+                <div class="login-options">
+                    <div class="login-section primary-login">
+                        <h4><i class="fas fa-sign-in-alt"></i> Easy Login with Steam</h4>
+                        <p>Sign in with your Steam account to automatically access your friends and game libraries. No setup required!</p>
+                        
+                        <button id="steam-login-btn" class="btn btn-steam">
+                            <i class="fab fa-steam"></i> Sign in through Steam
+                        </button>
+                        
+                        <div class="login-benefits">
+                            <ul>
+                                <li><i class="fas fa-check"></i> One-click login</li>
+                                <li><i class="fas fa-check"></i> Automatic friend access</li>
+                                <li><i class="fas fa-check"></i> No API keys needed</li>
+                                <li><i class="fas fa-check"></i> Completely secure</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="login-divider">
+                        <span>OR</span>
+                    </div>
+                    
+                    <div class="login-section secondary-login">
+                        <h4><i class="fas fa-key"></i> Advanced: Use API Key</h4>
+                        <p>For advanced users who prefer to use their own Steam Web API key.</p>
+                        
+                        <button id="use-api-key-btn" class="btn btn-secondary">
+                            <i class="fas fa-cog"></i> Set up API Key Instead
+                        </button>
+                    </div>
+                    
+                    <div class="login-section demo-login">
+                        <h4><i class="fas fa-play"></i> Just Exploring</h4>
+                        <p>Try the demo with sample data to see how the app works.</p>
+                        
+                        <button id="demo-mode-btn" class="btn btn-outline">
+                            <i class="fas fa-eye"></i> View Demo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Key Modal (fallback) -->
+        <div id="api-key-modal" class="modal hidden">
+            <div class="modal-content">
+                <button id="back-to-login" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> Back to login options
+                </button>
+                
+                <h3><i class="fas fa-key"></i> Steam API Key Setup</h3>
+                
+                <div class="api-key-explainer">
+                    <div class="explainer-section">
+                        <h4><i class="fas fa-info-circle"></i> Quick Setup:</h4>
+                        <ol class="setup-steps">
+                            <li>Visit <a href="https://steamcommunity.com/dev/apikey" target="_blank" class="steam-link">Steam's API page <i class="fas fa-external-link-alt"></i></a></li>
+                            <li>Log in and enter any domain name</li>
+                            <li>Copy your API key and paste it below</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="api-key-input">Steam API Key:</label>
+                    <input type="password" id="api-key-input" placeholder="Paste your Steam API key here">
+                    <div class="input-help">
+                        <button type="button" id="toggle-api-visibility" class="btn-link">
+                            <i class="fas fa-eye"></i> Show key
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="save-api-key-btn" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save & Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Mode Modal -->
+        <div id="demo-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3><i class="fas fa-play-circle"></i> Demo Mode</h3>
+                <p>In demo mode, you can explore the interface with sample data, but you won't be able to find real games from Steam. This lets you see how the app works before setting up your API key.</p>
+                
+                <div class="demo-features">
+                    <h4>What you can do in demo mode:</h4>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Add and manage sample friends</li>
+                        <li><i class="fas fa-check"></i> Test the friend selection interface</li>
+                        <li><i class="fas fa-check"></i> See sample game results</li>
+                        <li><i class="fas fa-times"></i> Find real games from Steam profiles</li>
+                    </ul>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="start-demo-btn" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Start Demo
+                    </button>
+                    <button id="setup-real-btn" class="btn btn-secondary">
+                        <i class="fas fa-cog"></i> Set Up Real API Instead
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/demo-data.js"></script>
+    <script src="js/steam-api.js"></script>
+    <script src="js/steam-auth.js"></script>
+    <script src="js/friends-manager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
