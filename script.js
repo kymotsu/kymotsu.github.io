@@ -1,5 +1,6 @@
 const generateBtn = document.getElementById('generateBtn');
 const randomNumberSpan = document.getElementById('randomNumber');
+const mousePositionSpan = document.getElementById('mousePosition');
 
 let mouseX = 0;
 let mouseY = 0;
@@ -7,6 +8,8 @@ let mouseY = 0;
 document.addEventListener('mousemove', (event) => {
     mouseX = event.clientX;
     mouseY = event.clientY;
+    mousePositionSpan.textContent = `${mouseX}, ${mouseY}`;
+    generateRandomNumber();
 });
 
 function generateRandomNumber() {
