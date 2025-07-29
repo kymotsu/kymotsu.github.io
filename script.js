@@ -46,7 +46,7 @@ function generateRandomNumber() {
     }
 
     // Make the hash positive and take the modulo to get a number in a specific range
-    const finalRandomNumber = Math.abs(hash) % 1000000; // Example range: 0-999999
+    const finalRandomNumber = Math.abs(hash) % 10000000000; // Example range: 0-9999999999
 
     randomNumberSpan.textContent = finalRandomNumber;
     mouseBuffer = []; // Clear the buffer

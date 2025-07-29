@@ -51,8 +51,7 @@ p {
     color: #d9534f;
 }
 
-#mouseBuffer {
-    display: block;
+#mouseBufferWrapper {
     height: 100px;
     overflow-y: scroll;
     border: 1px solid #ccc;
