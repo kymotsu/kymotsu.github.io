@@ -57,3 +57,25 @@ function generateRandomNumber() {
 }
 
 initializeValues();
+
+const themeSwitch = document.getElementById('checkbox');
+
+function toggleDarkMode() {
+    const body = document.body;
+    const container = document.querySelector('.container');
+    const h1 = document.querySelector('h1');
+    const h2 = document.querySelector('h2');
+    const p = document.querySelectorAll('p');
+    const randomNumber = document.getElementById('randomNumber');
+    const mouseBufferWrapper = document.getElementById('mouseBufferWrapper');
+
+    body.classList.toggle('dark-mode');
+    container.classList.toggle('dark-mode');
+    h1.classList.toggle('dark-mode');
+    h2.classList.toggle('dark-mode');
+    p.forEach(el => el.classList.toggle('dark-mode'));
+    randomNumber.classList.toggle('dark-mode');
+    mouseBufferWrapper.classList.toggle('dark-mode');
+}
+
+themeSwitch.addEventListener('change', toggleDarkMode);
