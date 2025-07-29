@@ -1,23 +1,33 @@
 const randomNumberSpan = document.getElementById('randomNumber');
 const mousePositionSpan = document.getElementById('mousePosition');
+const timestampSpan = document.getElementById('timestamp');
+const mathRandSpan = document.getElementById('mathRand');
+const mouseBufferSpan = document.getElementById('mouseBuffer');
 
-let mouseX = 0;
-let mouseY = 0;
+let mouseBuffer = [];
+let timeout;
 
 document.addEventListener('mousemove', (event) => {
-    mouseX = event.clientX;
-    mouseY = event.clientY;
-    mousePositionSpan.textContent = `${mouseX}, ${mouseY}`;
-    generateRandomNumber();
+    const { clientX, clientY } = event;
+    mousePositionSpan.textContent = `${clientX}, ${clientY}`;
+    mouseBuffer.push([clientX, clientY]);
+
+    clearTimeout(timeout);
+    timeout = setTimeout(generateRandomNumber, 500);
 });
 
 function generateRandomNumber() {
     const date = new Date();
     const timestamp = date.getTime();
     const mathRand = Math.random();
+    const mouseBufferString = JSON.stringify(mouseBuffer);
+
+    timestampSpan.textContent = timestamp;
+    mathRandSpan.textContent = mathRand;
+    mouseBufferSpan.textContent = mouseBufferString;
 
     // Combine the values into a single string
-    const combinedString = `${timestamp}${mathRand}${mouseX}${mouseY}`;
+    const combinedString = `${timestamp}${mathRand}${mouseBufferString}`;
 
     // Hash the string to create a more random-looking number
     let hash = 0;
@@ -31,4 +41,5 @@ function generateRandomNumber() {
     const finalRandomNumber = Math.abs(hash) % 1000000; // Example range: 0-999999
 
     randomNumberSpan.textContent = finalRandomNumber;
+    mouseBuffer = []; // Clear the buffer
 }
