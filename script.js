@@ -7,6 +7,14 @@ const mouseBufferSpan = document.getElementById('mouseBuffer');
 let mouseBuffer = [];
 let timeout;
 
+function initializeValues() {
+    mousePositionSpan.textContent = 'N/A';
+    timestampSpan.textContent = 'N/A';
+    mathRandSpan.textContent = 'N/A';
+    mouseBufferSpan.textContent = 'N/A';
+    randomNumberSpan.textContent = 'N/A';
+}
+
 document.addEventListener('mousemove', (event) => {
     const { clientX, clientY } = event;
     mousePositionSpan.textContent = `${clientX}, ${clientY}`;
@@ -43,3 +51,5 @@ function generateRandomNumber() {
     randomNumberSpan.textContent = finalRandomNumber;
     mouseBuffer = []; // Clear the buffer
 }
+
+initializeValues();
