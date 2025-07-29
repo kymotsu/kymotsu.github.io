@@ -1,4 +1,3 @@
-const generateBtn = document.getElementById('generateBtn');
 const randomNumberSpan = document.getElementById('randomNumber');
 const mousePositionSpan = document.getElementById('mousePosition');
 
@@ -33,5 +32,3 @@ function generateRandomNumber() {
 
     randomNumberSpan.textContent = finalRandomNumber;
 }
-
-generateBtn.addEventListener('click', generateRandomNumber);
