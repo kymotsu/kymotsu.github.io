@@ -13,6 +13,10 @@ function initializeValues() {
     mathRandSpan.textContent = 'N/A';
     mouseBufferSpan.textContent = 'N/A';
     randomNumberSpan.textContent = 'N/A';
+
+    const header = document.querySelector('h1');
+    const scrollbox = document.getElementById('mouseBufferWrapper');
+    scrollbox.style.width = `${header.offsetWidth}px`;
 }
 
 document.addEventListener('mousemove', (event) => {
